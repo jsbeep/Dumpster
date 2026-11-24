@@ -34,7 +34,10 @@ apps/builder ── frontmatter·git 날짜·링크 해석 ──▶ graph.json 
 | 11-25 | P2·P3를 에이전트 두 부서로 병렬 진행 → 충돌은 lockfile 하나뿐 |
 | 11-25 | **옵시디언 → 블록 파서는 계속 업데이트해 간다** (새 플러그인·문법 생길 때마다). 플레이그라운드가 그 작업대 |
 | 11-25 | `%%주석%%`과 `<!-- -->`는 파싱 전에 지운다 (코드 안 `%%`만 남김). 옵시디언에서 안 보이는 건 공개도 안 한다 |
-| 11-25 | 콜아웃 안 펜스에 `>`가 빠지면 옵시디언(CommonMark)처럼 깨진 그대로 두고 줄 번호 경고만 |
+| 11-25 | ~~콜아웃 안 펜스에 `>`가 빠지면 깨진 그대로 두고 경고만~~ → 틀렸음: 옵시디언 읽기 화면은 **안 깨진다** (사용자 스크린샷). 파서가 remark 전에 빠진 `>`를 채운다 |
+| 11-25 | 블록 스타일은 데이터 — 각 View의 `STYLE` 상수 → `packages/blocks/src/styles.json` 한 파일. `BlockRenderer styles=`로 덮어쓰기 |
+| 11-25 | 펜스 매핑은 데이터 — `cardlink` 하드코딩 → `packages/markdown/src/fences.json`. 대상 블록·필드 표(`FENCE_TARGETS`)만 코드 |
+| 11-25 | 플레이그라운드 라이브 탭의 문서·이미지 해석 = 짜가 볼트를 번들에 넣고 빌더와 같은 규칙 (graph.json·서버 안 씀) |
 
 ---
 
@@ -117,7 +120,7 @@ type Column = { id: number } & (                 // id: push마다 고유 (mongo
 | `>` 인용 | 114줄 | `blockquote{children}` (안에 코드·리스트) |
 | `> [!kind]±` 콜아웃 | 4 | `callout{kind, title, fold, children}` |
 | ` ``` ` | 12 | `code{language, text}` |
-| ` ```cardlink ` (플러그인) | 0 | `bookmark` |
+| ` ```cardlink ` (플러그인) | 0 | `bookmark` — `fences.json` 규칙 |
 | 표 | 248행 | `table{align, header, rows}`, 셀 `<br>` → 줄바꿈 |
 | `---` | 15 | `hr` |
 | `![[x.png\|447]]` | 12 | `image{src(해시 복사본), width}` |
@@ -128,7 +131,7 @@ type Column = { id: number } & (                 // id: push마다 고유 (mongo
 | `%%주석%%` | 0 | **삭제** (공개 금지) |
 | 수식·각주·`^id` | 0 | `unsupported` + 경고 |
 
-함정: ① 콜아웃 안 코드펜스에 `>` 빠진 줄 (`블로그 문서 메타데이터 구조 고민.md`) — 옵시디언 렌더와 대조 ② 표 안 `[[a|b]]`의 `|` ③ 붙여넣은 `<div class="...">` — Tailwind 클래스가 실제로 먹음 ④ 이미지는 파일 이름만으로 볼트 전체에서 찾음.
+함정: ① 콜아웃 안 코드펜스에 `>` 빠진 줄 (`블로그 문서 메타데이터 구조 고민.md`) — 옵시디언은 닫는 펜스까지 콜아웃 안 코드로 잇는다 ② 표 안 `[[a|b]]`의 `|` ③ 붙여넣은 `<div class="...">` — Tailwind 클래스가 실제로 먹음 ④ 이미지는 파일 이름만으로 볼트 전체에서 찾음.
 
 ### 구현 (P2, `packages/markdown`)
 
@@ -145,6 +148,8 @@ type Column = { id: number } & (                 // id: push마다 고유 (mongo
 | `~한 개~` | 취소선 아님 (`singleTilde: false`) |
 | 수식·각주·`^id` | `$$` 문단·각주 정의 → unsupported, 인라인 `$` → 글자 + 경고, 블록 끝 `^id` → 숨김 + 경고 |
 | 콜아웃 kind | 소문자로만. 별칭 묶기(summary→abstract 등)와 기본 제목은 렌더러가 |
+| 콜아웃 펜스의 빠진 `>` (함정 ①) | `quoteFence.ts`가 remark 전에 원문에서 채운다: 인용 안에서 연 펜스는 `>` 없는 줄(빈 줄 포함)도 닫는 펜스까지 코드, `>` 붙은 줄은 `>`만 뗌. 닫는 펜스는 `>`가 없어도 인정. **닫는 펜스를 못 찾으면 안 건드림**(CommonMark대로 끊기고 "N번째 줄 코드 펜스가 안 닫힘"). 줄 수가 안 바뀌어 경고 줄 번호 그대로. 주석 지우기보다 먼저 (코드 안 `%%` 보호). 실제 볼트 경고 4개 → 0 |
+| 펜스 매핑 | `fences.json`: `{ "언어": { block, body: "yaml", props: { 필드: [YAML 키 후보…] }, note } }`. 언어는 소문자로 맞춤. 필드 종류는 `FENCE_TARGETS`(required = 비면 매핑 실패 → 코드 블록 + 경고, text = '', optional = null). `ParseContext.fences`로 덮어쓰기 (플레이그라운드 초안) |
 
 알려진 한계: `\[\[이스케이프\]\]`도 링크가 됨, `[[_a_]]`처럼 위키링크 안 마크다운은 깨짐, `![[문서#헤딩]]`은 문서 전체 임베드 + 경고.
 
@@ -163,14 +168,15 @@ blog-explorer `BlockRenderer`에서 출발, 색·테마는 mongolive(Tailwind v3
 
 ### 구현 (P3, `packages/blocks`)
 
-- `BlockRenderer({ blocks, onOpenDoc?, imageLoading?, className? })`, 블록 타입마다 `src/views/<type>.tsx` 하나 + 파일 맨 위 `export const STYLE = {...}` (플레이그라운드에서 편집할 자리). 계약에 타입이 늘면 `BLOCK_VIEWS`에서 타입 에러
+- `BlockRenderer({ blocks, onOpenDoc?, imageLoading?, className?, styles? })`, 블록 타입마다 `src/views/<type>.tsx` 하나. 계약에 타입이 늘면 `BLOCK_VIEWS`에서 타입 에러
+- 스타일(Tailwind 클래스 글자)은 `src/styles.json` 한 파일 — 키 = 블록 타입(+ `renderer`·`inline`), View는 `useStyles().<type>`로 읽는다. 키 모양은 View 코드가 정하므로 `styleShapeError`가 값만 바뀐 건지 검사 (플레이그라운드 저장 전). 클래스 설명 주석은 각 View의 "스타일 메모"
 - 본문 16px · 줄간격 1.7, 블록은 em 단위 (탐색기가 root 크기만 바꾸면 같이 줄어듦). 한국어는 `break-keep`
 - code 배경: 라이트 `#f7f7f5`, 다크 `#181818` (`--code-*` 변수). 문법 색칠은 아직 없음
 - 인라인 색 우선순위 링크 > 코드 > 굵게. `javascript:`·`data:` 링크 차단. docId null 링크는 `<a>`가 아닌 회색 글자
 - 콜아웃 바탕 `색-500/[0.08]` 틴트, 접힘 애니메이션은 `<details>` 높이 전환
 
 **apps/web이 가져다 쓰는 법**
-1. `tailwind.config.cjs`: `presets: [require('@dumpster/blocks/tailwind.preset')]`, `content`에 `'../../packages/blocks/src/**/*.{ts,tsx}'`
+1. `tailwind.config.cjs`: `presets: [require('@dumpster/blocks/tailwind.preset')]`, `content`에 `'../../packages/blocks/src/**/*.{ts,tsx,json}'` (**json 필수** — 클래스가 `styles.json`에 있다)
 2. CSS 맨 위: `@import '@dumpster/blocks/theme.css';` 다음 `@tailwind …`
 3. `<BlockRenderer blocks={doc.blocks} onOpenDoc={(id, heading) => pushColumn(id, heading)} />` — 없으면 `#/d/{id}` href로 이동
 4. 다크: `<html class="dark">`
@@ -189,14 +195,25 @@ packages/
   blocks/      ✅ React 렌더러 + Tailwind 프리셋 + theme.css + kitchenSink 샘플 — 블록 타입별 "그리는 쪽"
 apps/
   builder/     ✅ 파일·git·env·이미지 복사 → graph.json (Node 전용)
-  playground/  🟡 개발 전용 — 지금은 블록 갤러리만 (:5310). 다음: 라이브 md→블록 미리보기, 스타일·펜스 매핑 편집
+  playground/  ✅ 개발 전용 (:5310) — 갤러리 · 라이브 md→블록 · 스타일 편집 · 펜스 매핑 편집 (저장은 vite dev 엔드포인트)
   web/         ⏳ 탐색기 (배포)
 fixtures/vault/  짜가 볼트 — 홈서버 구축기(트리) · 시즌2(중첩·컬렉션 넘는 prev) · 블록 견본(문법) · 비밀 금고(비공개)
 ```
 
 블록 레지스트리는 처음 계획(블록 1개 = 폴더 1개에 parse+View)이 아니라 **두 패키지로 나눔**: 읽는 쪽은 `markdown`, 그리는 쪽은 `blocks`. 병렬 부서가 같은 폴더를 안 건드리게 하려던 것인데, 파서를 계속 고쳐 갈 거라 렌더러와 따로 움직이는 게 오히려 낫다. 둘을 잇는 건 `schema/blocks.ts` 하나.
 
-**플레이그라운드**: 플러그인 대부분이 ` ```언어 ` 펜스로 문법을 더하므로 "펜스 언어 → 블록, YAML 키 → 속성" 선언형 매핑으로 대부분 처리 — 이건 데이터라 화면에서 바로 저장. 새 인라인 문법·새 View는 코드라 뼈대만 생성. Storybook 안 씀(Pi에서 무거움). 블록 갤러리 = 검수용 시각 회귀 화면.
+**플레이그라운드** (`apps/playground`, P3.5): 플러그인 대부분이 ` ```언어 ` 펜스로 문법을 더하므로 "펜스 언어 → 블록, YAML 키 → 속성" 선언형 매핑으로 대부분 처리 — 이건 데이터라 화면에서 바로 저장. 새 View(블록 타입)는 코드라 뼈대 조각만 생성. Storybook 안 씀(Pi에서 무거움).
+
+| 탭 | 하는 일 |
+|---|---|
+| 갤러리 | kitchenSink를 타입별로 — 검수용 시각 회귀 화면 |
+| 라이브 | 짜가 볼트 노트 고르기·붙여넣기 → 미리보기 / Block JSON / 경고(줄 번호 누르면 그 줄로) / refs. 문서 링크를 누르면 그 노트를 연다. 파싱 시간 표시 |
+| 스타일 | `styles.json` 값 편집 → 모든 탭 미리보기에 바로. 바뀐 곳 표시·되돌리기·저장 |
+| 펜스 | `fences.json` 규칙 추가·편집·검사 + 시험 마크다운. "새 블록 타입 뼈대"가 고칠 파일 7곳의 코드 조각을 만든다 |
+
+- 초안(스타일·펜스)은 App이 들고 모든 탭에 넘긴다. 저장 = `PUT /__dumpster/styles|fences` (`devApi.ts`, dev 전용) → 패키지 검사 함수(`styleShapeError`·`fenceRulesError`)를 vite `ssrLoadModule`로 불러 같은 규칙으로 검사 → 짧은 배열은 한 줄로 쓰는 포맷(손으로 고친 것과 같은 모양). 자기가 쓴 JSON은 HMR을 안 보낸다 (다른 탭 초안 보존)
+- 아직 저장 안 한 새 클래스: 초안의 클래스 글자를 `PUT /__dumpster/draft-classes` → `apps/playground/.draft/classes.txt`(gitignore, Tailwind content) → CSS 모듈만 갱신. vite 기본 처리는 이 파일을 **페이지 새로고침**으로 다뤄서 초안이 날아가므로 플러그인이 CSS 모듈로 바꿔 준다
+- 검증: 헤드리스 Firefox(BiDi) 조작 17항목 — 라이브 입력·줄 이동·링크로 노트 열기, 초안 클래스 CSS 생성(새로고침 없음), 저장·배지, 펜스 규칙 추가→라이브 반영
 
 ---
 
@@ -208,7 +225,7 @@ fixtures/vault/  짜가 볼트 — 홈서버 구축기(트리) · 시즌2(중첩
 | P1 | 속성·엣지 빌더 | 짜가 볼트 트리 = 매니페스트 기대값, 비공개 유출 0, 실제 볼트 2개 컬렉션 정상 | ✅ 11-24 (테스트 43) |
 | P2 | 마크다운 파서 | fixture별 정답 JSON, 미지원 문법 리포트, `%%`·카나리아 유출 0 | ✅ 11-25 (markdown 89 · builder 51) |
 | P3 | 렌더러 + 테마 | 모든 블록 라이트/다크 스크린샷 | ✅ 11-25 (blocks 6, Firefox 스크린샷) |
-| P3.5 | 플레이그라운드 | 갤러리 ✅ + 라이브 md→블록 미리보기 + 스타일 저장 | 🟡 |
+| P3.5 | 플레이그라운드 + 함정 ① | 갤러리 + 라이브 md→블록 + 스타일·펜스 매핑 저장 | ✅ 11-25 (테스트 170, Firefox 조작 17) |
 | P4 | 탐색기 | 매니페스트의 탐색 시나리오 표를 e2e로 | |
 | P5 | 배포 (gh-pages) | 실제 URL, 비공개 문서·`%%` 0건 | |
 
@@ -219,8 +236,8 @@ fixtures/vault/  짜가 볼트 — 홈서버 구축기(트리) · 시즌2(중첩
 | `pnpm graph` 짜가 볼트 (31문서, 블록 포함) | **193ms**, 114KB | 빌드마다 | 하 |
 | `pnpm graph` 실제 볼트 (19문서, 1.8k줄, 이미지 12) | **약 450ms** (첫 회 537ms), 563KB · gzip 70KB · RSS 176MB | 빌드마다 | 하 — 시간 대부분 micromark |
 | `pnpm install` | 193개, node_modules 179MB, 0.5초 (pnpm 캐시) | 의존성 바뀔 때 | 하 |
-| `pnpm test` | 157개, 수 초 | 수시 | 하 |
-| playground `vite build` | **3.6초**, 피크 약 494MB · JS 179KB(gzip 58KB) · CSS 26KB | 배포 | 하~중 |
+| `pnpm test` | 170개, 수 초 | 수시 | 하 |
+| playground `vite build` | **4.5초** · JS 465KB(gzip 147KB, 파서·YAML·짜가 볼트 포함) · CSS 30KB | 가끔 (개발 전용) | 하~중 |
 | playground `vite dev` | 약 406MB | 개발 중 | 중 — mongolive dev와 동시 실행 주의 |
 | 헤드리스 Firefox 스크린샷 | 1장 약 2초 | 단계 끝 | 중 — 쓰고 나면 종료 |
 | mermaid 빌드 렌더 | 헤드리스 브라우저 필요 | — | 상 → 브라우저 지연 로드로 |
@@ -236,7 +253,6 @@ graph.json이 블록 때문에 12KB → 563KB(실제 볼트)로 커짐 → P4/P5
 
 ### 열린 문제
 
-- 함정 ① 실물 대조: `블로그 문서 메타데이터 구조 고민.md`의 콜아웃 0710·0726이 옵시디언 읽기 화면에서도 깨지는지 확인 (깨지면 노트 줄마다 `>` 추가)
 - graph.json 크기 (위 부하 표)
 - 계약 제안 (P3): `embed.heading?` (`![[문서#헤딩]]`), `image.caption?` — 탐색기에서 필요해지면
 
@@ -246,7 +262,7 @@ graph.json이 블록 때문에 12KB → 563KB(실제 볼트)로 커짐 → P4/P5
 
 ```bash
 pnpm graph            # .env의 볼트 → out/graph.json(+ out/assets) + 컬렉션별 트리·블록 수·리포트 출력
-pnpm dev:playground   # 블록 갤러리 :5310 (?theme=dark · ?width=wide · ?only=code,table)
+pnpm dev:playground   # 플레이그라운드 :5310 (?tab=live|style|fence · ?theme=dark · ?width=wide · ?only=code,table · ?note=<볼트 경로> · ?section=<스타일 키>)
 pnpm test
 pnpm typecheck
 ```

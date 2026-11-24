@@ -1,0 +1,14 @@
+{
+  "cardlink": {
+    "note": "auto-card-link 플러그인",
+    "block": "bookmark",
+    "body": "yaml",
+    "props": {
+      "href": ["url"],
+      "title": ["title", "host", "url"],
+      "description": ["description"],
+      "icon": ["favicon"],
+      "image": ["image"]
+    }
+  }
+}

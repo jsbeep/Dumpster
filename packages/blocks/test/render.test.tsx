@@ -1,7 +1,7 @@
 import type { Block } from '@dumpster/schema'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { describe, expect, it } from 'vitest'
-import { BLOCK_VIEWS, BlockRenderer } from '../src'
+import { BLOCK_VIEWS, BlockRenderer, DEFAULT_STYLES, styleShapeError, type BlockStyles } from '../src'
 import { kitchenSink } from '../src/samples/kitchenSink'
 
 const html = (blocks: Block[]) => renderToStaticMarkup(<BlockRenderer blocks={blocks} onOpenDoc={() => {}} />)
@@ -70,5 +70,33 @@ describe('BlockRenderer', () => {
     ])
     expect(out.match(/<figcaption/g)).toHaveLength(1)
     expect(out).toContain('width="447"')
+  })
+})
+
+describe('styles.json', () => {
+  it('styles 덮어쓰기는 안쪽 블록(콜아웃 안 문단의 인라인)까지 닿는다', () => {
+    const styles: BlockStyles = structuredClone(DEFAULT_STYLES)
+    styles.inline.bold = 'font-black'
+    styles.callout.color.blue.box = 'bg-blue-900'
+    const out = renderToStaticMarkup(
+      <BlockRenderer
+        styles={styles}
+        blocks={[{ type: 'callout', kind: 'note', title: [], fold: 'none', children: [{ type: 'paragraph', inlines: [{ text: '굵게', bold: true }] }] }]}
+      />,
+    )
+    expect(out).toContain('bg-blue-900')
+    expect(out).toMatch(/<strong class="font-black[^"]*">굵게<\/strong>/)
+    expect(html([{ type: 'paragraph', inlines: [{ text: 'x', bold: true }] }])).toContain(DEFAULT_STYLES.inline.bold)
+  })
+
+  it('모양 검사: 값만 바꾼 건 통과, 키·배열 길이·타입이 다르면 경로로 알려준다', () => {
+    const ok = structuredClone(DEFAULT_STYLES)
+    ok.heading.level[1] = 'text-4xl'
+    expect(styleShapeError(ok)).toBeNull()
+    expect(styleShapeError({ ...ok, extra: { a: 'b' } })).toBe('/extra: 없는 키')
+    expect(styleShapeError({ ...ok, list: { ...ok.list, ordered: ['a'] } })).toBe('/list/ordered: 길이 4인 배열이어야 함')
+    expect(styleShapeError({ ...ok, hr: { hr: 3 } })).toBe('/hr/hr: 글자가 아님')
+    const { code: _drop, ...missing } = ok
+    expect(styleShapeError(missing)).toBe('/code: 객체가 아님')
   })
 })

@@ -154,7 +154,8 @@ describe('본문 링크·임베드 → 엣지 (origin body)', () => {
   })
 
   it('파서 경고는 파일 경로를 붙여 리포트로', () => {
-    expect(report.warnings).toContain("블록 견본/함정 모음.md: 10번째 줄 코드 펜스가 안 닫힘 (인용·콜아웃 안이면 '>' 빠진 줄 때문일 수 있음)")
+    // 함정 ①(콜아웃 펜스의 빠진 >)은 옵시디언처럼 복구되므로 펜스 경고가 없다
+    expect(report.warnings.filter((w) => w.includes('펜스'))).toEqual([])
     expect(report.warnings).toContain('블록 견본/주석과 HTML.md: 닫는 %% 없음 → 문서 끝까지 주석으로 지움')
   })
 })

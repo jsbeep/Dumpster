@@ -1,4 +1,5 @@
-export { BLOCK_VIEWS, BlockList, BlockRenderer, BlockView, RENDERER_STYLE, type BlockRendererProps } from './BlockRenderer'
+export { BLOCK_VIEWS, BlockList, BlockRenderer, BlockView, type BlockRendererProps } from './BlockRenderer'
 export { docHref, type BlockOf, type OpenDoc } from './context'
-export { INLINE_STYLE, InlineView, Inlines } from './inline'
+export { InlineView, Inlines } from './inline'
+export { DEFAULT_STYLES, StylesContext, styleShapeError, useStyles, type BlockStyles } from './styles'
 export { calloutKind } from './views/callout'

@@ -38,33 +38,15 @@
         {
           "type": "code",
           "language": "yaml",
-          "text": "title: 블로그 문서"
-        }
-      ]
-    },
-    {
-      "type": "paragraph",
-      "inlines": [
-        {
-          "text": "tags: [메모, 설계]"
-        }
-      ]
-    },
-    {
-      "type": "blockquote",
-      "children": [
+          "text": "title: 블로그 문서\ntags: [메모, 설계]\ncreatedAt: 2026-11-20"
+        },
         {
           "type": "paragraph",
           "inlines": [
             {
-              "text": "createdAt: 2026-11-20"
+              "text": "콜아웃 끝 문장"
             }
           ]
-        },
-        {
-          "type": "code",
-          "language": null,
-          "text": "콜아웃 끝 문장"
         }
       ]
     },
@@ -190,8 +172,5 @@
       "target": "doc:OS 설치"
     }
   ],
-  "warnings": [
-    "4번째 줄 코드 펜스가 안 닫힘 (인용·콜아웃 안이면 '>' 빠진 줄 때문일 수 있음)",
-    "8번째 줄 코드 펜스가 안 닫힘 (인용·콜아웃 안이면 '>' 빠진 줄 때문일 수 있음)"
-  ]
+  "warnings": []
 }

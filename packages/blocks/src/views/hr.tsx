@@ -1,7 +1,6 @@
-export const STYLE = {
-  hr: 'my-3 border-0 border-t border-slate-200',
-}
+import { useStyles } from '../styles'
 
 export function HrView() {
-  return <hr className={STYLE.hr} />
+  const S = useStyles().hr
+  return <hr className={S.hr} />
 }

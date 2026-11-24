@@ -3,3 +3,8 @@ declare module '*?raw' {
   const content: string
   export default content
 }
+
+// vite import.meta.glob — 순수성 테스트가 src 파일을 전부 글자로 읽는다
+interface ImportMeta {
+  glob<T>(pattern: string, opts: { query: string; import: string; eager: true }): Record<string, T>
+}

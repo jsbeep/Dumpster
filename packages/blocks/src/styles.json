@@ -1,0 +1,144 @@
+{
+  "renderer": {
+    "root": "dumpster-blocks flex min-w-0 flex-col gap-3 break-words break-keep font-sans text-base leading-[1.7] text-slate-700",
+    "stack": "flex min-w-0 flex-col gap-2",
+    "empty": "text-sm text-slate-400"
+  },
+  "inline": {
+    "bold": "font-semibold",
+    "boldColor": "text-slate-900",
+    "italic": "italic",
+    "code": "rounded-[4px] px-[0.3em] py-[0.1em] font-mono text-[0.85em]",
+    "codeBg": "bg-slate-100",
+    "codeText": "text-rose-600",
+    "strike": "line-through decoration-slate-400",
+    "highlight": "rounded-[2px] bg-amber-200/70 text-inherit [box-decoration-break:clone]",
+    "url": "text-emerald-700 underline decoration-emerald-300 underline-offset-[3px] transition-colors hover:decoration-emerald-600",
+    "doc": "rounded-[3px] text-emerald-700 underline decoration-emerald-300/0 underline-offset-[3px] transition-colors hover:bg-emerald-50 hover:decoration-emerald-600",
+    "missing": "text-slate-400"
+  },
+  "heading": {
+    "base": "scroll-mt-4 leading-snug tracking-[-0.01em] first:mt-0",
+    "level": {
+      "1": "mt-8 text-[1.875em] font-bold text-slate-900",
+      "2": "mt-7 text-[1.5em] font-bold text-slate-900",
+      "3": "mt-6 text-[1.25em] font-semibold text-slate-900",
+      "4": "mt-5 text-[1.125em] font-semibold text-slate-900",
+      "5": "mt-4 text-[1em] font-semibold text-slate-900",
+      "6": "mt-4 text-[0.9375em] font-semibold text-slate-500"
+    }
+  },
+  "paragraph": {
+    "p": "whitespace-pre-wrap"
+  },
+  "list": {
+    "list": "space-y-1 pl-[1.5em] marker:text-slate-400",
+    "unordered": ["list-disc", "list-[circle]", "list-[square]", "list-disc"],
+    "ordered": ["list-decimal", "list-[lower-alpha]", "list-[lower-roman]", "list-decimal"],
+    "item": "pl-[0.2em]",
+    "task": "relative list-none",
+    "checkWrap": "absolute -left-[1.5em] top-[0.35em] inline-flex h-[1em] w-[1em]",
+    "checkbox": "peer m-0 h-full w-full cursor-default appearance-none rounded-[4px] border-[1.5px] border-slate-300 bg-white checked:border-emerald-600 checked:bg-emerald-600",
+    "checkMark": "pointer-events-none absolute inset-0 m-auto h-[0.72em] w-[0.72em] text-white",
+    "done": "text-slate-400 line-through decoration-slate-300 [&_code]:text-inherit",
+    "children": "mt-1 flex min-w-0 flex-col gap-1"
+  },
+  "blockquote": {
+    "quote": "flex min-w-0 flex-col gap-2 border-l-[3px] border-slate-300 py-0.5 pl-4 text-slate-600"
+  },
+  "callout": {
+    "box": "min-w-0 rounded-lg px-4 py-3",
+    "color": {
+      "blue": {
+        "box": "bg-blue-500/[0.08]",
+        "title": "text-blue-600"
+      },
+      "cyan": {
+        "box": "bg-cyan-500/[0.09]",
+        "title": "text-cyan-700"
+      },
+      "emerald": {
+        "box": "bg-emerald-500/[0.09]",
+        "title": "text-emerald-700"
+      },
+      "amber": {
+        "box": "bg-amber-500/[0.1]",
+        "title": "text-amber-700"
+      },
+      "orange": {
+        "box": "bg-orange-500/[0.09]",
+        "title": "text-orange-600"
+      },
+      "red": {
+        "box": "bg-red-500/[0.08]",
+        "title": "text-red-600"
+      },
+      "violet": {
+        "box": "bg-violet-500/[0.08]",
+        "title": "text-violet-600"
+      },
+      "slate": {
+        "box": "bg-slate-500/[0.08]",
+        "title": "text-slate-600"
+      }
+    },
+    "head": "flex items-start gap-2 font-semibold [&_strong]:text-inherit",
+    "details": "[interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:[transition:height_0.25s_ease,content-visibility_0.25s_allow-discrete] [&[open]::details-content]:h-auto",
+    "summary": "cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden",
+    "icon": "mt-[0.325em] h-[1.05em] w-[1.05em] shrink-0",
+    "title": "min-w-0",
+    "chevron": "mt-[0.35em] h-[1em] w-[1em] shrink-0 opacity-70 transition-transform duration-200 [details[open]>summary>&]:rotate-90",
+    "body": "mt-2 flex min-w-0 flex-col gap-2"
+  },
+  "code": {
+    "box": "group/code relative min-w-0 overflow-hidden rounded-lg border border-code-border bg-code-bg text-code-fg",
+    "label": "flex h-9 select-none items-center border-b border-code-border px-4 font-mono text-[0.6875em] uppercase tracking-wider text-code-muted",
+    "copy": "absolute right-1.5 top-1 z-10 inline-flex h-7 w-7 items-center justify-center rounded-md border border-code-border bg-code-bg text-code-muted opacity-0 transition hover:text-code-fg focus-visible:opacity-100 group-hover/code:opacity-100 [@media(hover:none)]:opacity-100",
+    "pre": "overflow-x-auto overscroll-x-contain px-4 py-3 font-mono text-[0.8125em] leading-[1.6] [tab-size:4]"
+  },
+  "table": {
+    "wrap": "overflow-x-auto overscroll-x-contain min-w-0 rounded-lg border border-slate-200",
+    "table": "min-w-full border-collapse text-[0.9375em] leading-[1.6]",
+    "th": "min-w-[5em] whitespace-pre-wrap border-b border-r border-slate-200 bg-slate-500/[0.05] px-3 py-2 align-bottom font-semibold text-slate-800 last:border-r-0",
+    "td": "min-w-[5em] whitespace-pre-wrap border-b border-r border-slate-200 px-3 py-2 align-top last:border-r-0",
+    "row": "[&:last-child>td]:border-b-0",
+    "align": {
+      "left": "text-left",
+      "center": "text-center",
+      "right": "text-right"
+    }
+  },
+  "hr": {
+    "hr": "my-3 border-0 border-t border-slate-200"
+  },
+  "image": {
+    "figure": "min-w-0",
+    "img": "h-auto max-w-full rounded-md border border-slate-200",
+    "caption": "mt-1.5 text-[0.8125em] text-slate-400"
+  },
+  "bookmark": {
+    "card": "flex min-w-0 items-stretch overflow-hidden rounded-lg border border-slate-200 bg-white no-underline transition-colors hover:bg-slate-50",
+    "body": "flex min-w-0 flex-1 flex-col gap-1 px-3.5 py-3",
+    "title": "truncate text-[0.875em] font-medium text-slate-800",
+    "description": "line-clamp-2 text-[0.75em] leading-[1.5] text-slate-500",
+    "url": "mt-0.5 flex min-w-0 items-center gap-1.5 text-[0.75em] text-slate-400",
+    "icon": "h-3.5 w-3.5 shrink-0 rounded-sm",
+    "image": "w-28 shrink-0 object-cover sm:w-40"
+  },
+  "embed": {
+    "card": "flex min-w-0 items-center gap-2.5 rounded-lg border border-slate-200 px-3.5 py-2.5 text-[0.9375em]",
+    "active": "bg-white text-slate-800 no-underline transition-colors hover:border-emerald-300 hover:bg-emerald-50",
+    "inactive": "cursor-default bg-slate-50 text-slate-400",
+    "icon": "h-4 w-4 shrink-0",
+    "iconActive": "text-emerald-600",
+    "label": "min-w-0 flex-1 truncate font-medium",
+    "chevron": "h-4 w-4 shrink-0 text-slate-400"
+  },
+  "unsupported": {
+    "box": "min-w-0 rounded-lg border border-dashed border-slate-300 bg-slate-50",
+    "head": "flex items-center gap-2 px-3 pt-2 text-[0.6875em]",
+    "tag": "font-mono uppercase tracking-wider text-slate-400",
+    "reason": "rounded bg-amber-100 px-1.5 py-0.5 font-medium text-amber-800",
+    "raw": "overflow-x-auto overscroll-x-contain whitespace-pre-wrap px-3 pb-2.5 pt-1.5 font-mono text-[0.8125em] leading-[1.6] text-slate-600"
+  }
+}

@@ -1,13 +1,11 @@
 import { BlockView } from '../BlockRenderer'
 import type { BlockOf } from '../context'
-
-export const STYLE = {
-  quote: 'flex min-w-0 flex-col gap-2 border-l-[3px] border-slate-300 py-0.5 pl-4 text-slate-600',
-}
+import { useStyles } from '../styles'
 
 export function BlockquoteView({ block }: { block: BlockOf<'blockquote'> }) {
+  const S = useStyles().blockquote
   return (
-    <blockquote className={STYLE.quote}>
+    <blockquote className={S.quote}>
       {block.children.map((child, i) => (
         <BlockView key={i} block={child} />
       ))}

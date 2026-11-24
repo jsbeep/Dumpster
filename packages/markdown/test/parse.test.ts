@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Block, Inline } from '@dumpster/schema'
-import { parseMarkdown, slugifyHeading, type ParseContext } from '../src'
+import { DEFAULT_FENCES, fenceRulesError, parseMarkdown, slugifyHeading, type FenceRules, type ParseContext } from '../src'
 
 // 문법별 단위 테스트. 문서·이미지 해석은 가짜 ctx로 (빌더 없이도 파서만 돈다)
 const ctx: ParseContext = {
@@ -366,6 +366,56 @@ describe('인용과 콜아웃', () => {
   })
 })
 
+// 함정 ①: 옵시디언 읽기 화면은 인용 안에서 연 펜스를 '>' 빠진 줄 너머 닫는 펜스까지 잇는다 (사용자 스크린샷으로 확인, 11-25)
+describe('인용 안 코드펜스의 빠진 >', () => {
+  const code = (md: string) => {
+    const [b] = blocks(md)
+    if (b?.type !== 'callout' && b?.type !== 'blockquote') throw new Error(JSON.stringify(b))
+    return b.children
+  }
+
+  it('> 없는 줄(빈 줄 포함)도 코드로, > 붙은 줄은 >만 뗀다', () => {
+    const md = '> [!note] 예\n> ```ts\nconst a = 1\n\n> * 📄 목록처럼 보이는 줄\n> ```\n> 끝'
+    expect(code(md)).toEqual([
+      { type: 'code', language: 'ts', text: 'const a = 1\n\n* 📄 목록처럼 보이는 줄' },
+      { type: 'paragraph', inlines: [{ text: '끝' }] },
+    ])
+    expect(parse(md).warnings).toEqual([])
+  })
+
+  it('닫는 펜스에 >가 없어도 거기서 닫힌다', () => {
+    expect(blocks('> ```\n> a\nb\n```\n뒤')).toEqual([
+      { type: 'blockquote', children: [{ type: 'code', language: null, text: 'a\nb' }] },
+      { type: 'paragraph', inlines: [{ text: '뒤' }] },
+    ])
+  })
+
+  it('닫는 펜스가 없으면 안 건드린다 (인용 끝에서 끊기고 경고, 줄 번호는 원문 그대로)', () => {
+    const r = parse('> ```\n> a\n\n밖 문단', { lineOffset: 3 })
+    expect(r.blocks).toEqual([
+      { type: 'blockquote', children: [{ type: 'code', language: null, text: 'a' }] },
+      { type: 'paragraph', inlines: [{ text: '밖 문단' }] },
+    ])
+    expect(r.warnings).toEqual(['4번째 줄 코드 펜스가 안 닫힘'])
+  })
+
+  it('중첩 인용·리스트 안 펜스는 그 깊이·들여쓰기에 맞춰 채운다', () => {
+    expect(code('> > ```\n> a\nb\n> > ```')).toEqual([{ type: 'blockquote', children: [{ type: 'code', language: null, text: 'a\nb' }] }])
+    const [list] = code('> - 항목\n>   ```\nx\n>   ```')
+    expect(list).toEqual({ type: 'list', ordered: false, items: [{ inlines: [{ text: '항목' }], children: [{ type: 'code', language: null, text: 'x' }] }] })
+  })
+
+  it('인용 밖 코드 안의 "> ```" 예시는 펜스로 안 본다', () => {
+    const md = '````md\n> ```\n````\n\n본문\n```'
+    expect(blocks(md)[0]).toEqual({ type: 'code', language: 'md', text: '> ```' })
+    expect(blocks(md)[1]).toEqual({ type: 'paragraph', inlines: [{ text: '본문' }] })
+  })
+
+  it('코드 안 %%는 복구 뒤에도 코드로 남는다 (주석 지우기가 복구된 코드 범위를 본다)', () => {
+    expect(code('> ```\n> a %% b\nc %% d\n> ```')).toEqual([{ type: 'code', language: null, text: 'a %% b\nc %% d' }])
+  })
+})
+
 describe('코드·카드 링크·표·구분선', () => {
   it('코드 언어 있음/없음/들여쓰기', () => {
     expect(blocks('```ts title="a.ts"\nconst a = 1\n```\n\n```\n없음\n```\n\n    들여쓴 코드')).toEqual([
@@ -385,7 +435,29 @@ describe('코드·카드 링크·표·구분선', () => {
   it('url 없는 cardlink는 코드 블록 그대로 + 경고', () => {
     const r = parse('```cardlink\ntitle: 없음\n```')
     expect(r.blocks).toEqual([{ type: 'code', language: 'cardlink', text: 'title: 없음' }])
-    expect(r.warnings).toEqual(['cardlink에 url 없음 → 코드 블록으로 둠'])
+    expect(r.warnings).toEqual(['cardlink 펜스 → bookmark: href 없음 (YAML url) → 코드 블록으로 둠'])
+  })
+
+  it('펜스 매핑은 데이터 — ctx.fences로 새 언어를 더하면 코드 수정 없이 블록이 된다', () => {
+    const fences = {
+      ...DEFAULT_FENCES,
+      bookmark: { block: 'bookmark', body: 'yaml', props: { href: ['link'], title: ['name', 'link'] } },
+    } satisfies FenceRules
+    expect(parse('```Bookmark\nlink: https://b.com\nname: 비\n```', { fences }).blocks).toEqual([
+      { type: 'bookmark', href: 'https://b.com', title: '비', description: '', icon: null, image: null },
+    ])
+    expect(parse('```bookmark\nlink: [깨진\n```', { fences }).warnings).toEqual(['bookmark 펜스 → bookmark: YAML을 못 읽음 → 코드 블록으로 둠'])
+    expect(parse('```bookmark\nlink: https://b.com\n```').blocks[0]).toMatchObject({ type: 'code' }) // 기본 매핑엔 없음
+  })
+
+  it('fences.json 검사: 기본값은 통과, 잘못된 대상·필드·필수 누락은 경로로', () => {
+    expect(fenceRulesError(DEFAULT_FENCES)).toBeNull()
+    const base = DEFAULT_FENCES.cardlink
+    expect(fenceRulesError({ Card: base })).toBe('/Card: 펜스 언어는 소문자·숫자·_+#.-만')
+    expect(fenceRulesError({ x: { ...base, block: 'diagram' } })).toBe('/x/block: bookmark 중 하나여야 함')
+    expect(fenceRulesError({ x: { ...base, props: { ...base.props, color: ['c'] } } })).toBe('/x/props/color: bookmark에 없는 필드')
+    expect(fenceRulesError({ x: { ...base, props: { title: ['t'] } } })).toBe('/x/props/href: 필수 필드라 YAML 키가 하나는 있어야 함')
+    expect(fenceRulesError({ x: { ...base, extra: 1 } })).toBe('/x/extra: 없는 키')
   })
 
   it('표: 정렬, 셀 <br> → \\n, 모자란 셀은 빈 칸으로 채움', () => {

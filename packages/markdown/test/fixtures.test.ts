@@ -7,11 +7,6 @@ import tables from '../../../fixtures/vault/블록 견본/표와 코드.md?raw'
 import images from '../../../fixtures/vault/블록 견본/이미지와 임베드.md?raw'
 import comments from '../../../fixtures/vault/블록 견본/주석과 HTML.md?raw'
 import traps from '../../../fixtures/vault/블록 견본/함정 모음.md?raw'
-import parseSrc from '../src/parse.ts?raw'
-import commentsSrc from '../src/comments.ts?raw'
-import slugSrc from '../src/slug.ts?raw'
-import wikilinkSrc from '../src/wikilink.ts?raw'
-import indexSrc from '../src/index.ts?raw'
 
 // 블록 견본 컬렉션(fixtures/vault/블록 견본) 정답. golden/*.json이 fixture별 정답 JSON —
 // 파서 출력이 바뀌면 diff를 눈으로 확인하고 `pnpm vitest run -u`로 갱신한다.
@@ -65,8 +60,8 @@ describe('함정 4개', () => {
   const blocks = parse(traps).blocks
   const after = (heading: string) => blocks.slice(blocks.findIndex((b) => b.type === 'heading' && b.inlines.some((i) => i.text.includes(heading))) + 1)
 
-  it('① 콜아웃 코드펜스에 > 빠진 줄 → 옵시디언(CommonMark)처럼 거기서 콜아웃과 코드가 끝난다', () => {
-    const [callout, stray, rest] = after('①')
+  it('① 콜아웃 코드펜스에 > 빠진 줄 → 옵시디언 읽기 화면처럼 닫는 펜스까지 콜아웃 안 코드로 잇는다', () => {
+    const [callout, next] = after('①')
     expect(callout).toEqual({
       type: 'callout',
       kind: 'abstract',
@@ -74,22 +69,12 @@ describe('함정 4개', () => {
       fold: 'closed',
       children: [
         { type: 'paragraph', inlines: [{ text: '노션에서 복사한 속성' }] },
-        { type: 'code', language: 'yaml', text: 'title: 블로그 문서' }, // > 빠진 줄 앞에서 잘림
+        { type: 'code', language: 'yaml', text: 'title: 블로그 문서\ntags: [메모, 설계]\ncreatedAt: 2026-11-20' },
+        { type: 'paragraph', inlines: [{ text: '콜아웃 끝 문장' }] },
       ],
     })
-    expect(stray).toEqual({ type: 'paragraph', inlines: [{ text: 'tags: [메모, 설계]' }] }) // 인용 밖 문단
-    // 남은 > 줄은 콜아웃이 아닌 그냥 인용. 닫는 ```가 새 코드를 열어 마지막 문장을 삼킨다
-    expect(rest).toEqual({
-      type: 'blockquote',
-      children: [
-        { type: 'paragraph', inlines: [{ text: 'createdAt: 2026-11-20' }] },
-        { type: 'code', language: null, text: '콜아웃 끝 문장' },
-      ],
-    })
-    expect(parse(traps).warnings).toEqual([
-      "4번째 줄 코드 펜스가 안 닫힘 (인용·콜아웃 안이면 '>' 빠진 줄 때문일 수 있음)",
-      "8번째 줄 코드 펜스가 안 닫힘 (인용·콜아웃 안이면 '>' 빠진 줄 때문일 수 있음)",
-    ])
+    expect(next).toMatchObject({ type: 'heading', anchor: expect.stringContaining('②') })
+    expect(parse(traps).warnings.filter((w) => w.includes('펜스'))).toEqual([])
   })
 
   it('② 표 안 [[a\\|b]] → 셀이 안 갈라지고 별칭 링크 하나', () => {
@@ -134,13 +119,12 @@ describe('함정 4개', () => {
 })
 
 describe('순수성 — 브라우저 플레이그라운드에서 그대로 돌아야 한다', () => {
-  it.each([
-    ['parse.ts', parseSrc],
-    ['comments.ts', commentsSrc],
-    ['slug.ts', slugSrc],
-    ['wikilink.ts', wikilinkSrc],
-    ['index.ts', indexSrc],
-  ])('%s는 fs·path·process·git을 안 쓴다', (_, src) => {
+  // src 아래 .ts 전부 — 새 파일이 생겨도 빠지지 않게
+  const sources = Object.entries(import.meta.glob<string>('../src/*.ts', { query: '?raw', import: 'default', eager: true }))
+  it('src 파일을 다 훑는다', () => {
+    expect(sources.map(([p]) => p.replace('../src/', ''))).toEqual(expect.arrayContaining(['parse.ts', 'quoteFence.ts', 'fences.ts', 'index.ts']))
+  })
+  it.each(sources)('%s는 fs·path·process·git을 안 쓴다', (_, src) => {
     expect(src).not.toMatch(/from ['"](node:|fs|path|child_process|os)['"/]/)
     expect(src).not.toMatch(/\bprocess\.|\brequire\(|\bimport\(/)
   })

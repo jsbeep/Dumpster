@@ -2,3 +2,5 @@ export { parseMarkdown, type BodyRef, type ParseContext, type ParseResult } from
 export { stripComments, type StripResult } from './comments'
 export { createSlugger, slugifyHeading } from './slug'
 export { IMAGE_EXTENSIONS, MEDIA_EXTENSIONS, extensionOf, parseImageAlias, parseWikilink, type Wikilink } from './wikilink'
+export { fillQuoteFences, type QuoteFenceResult } from './quoteFence'
+export { applyFence, DEFAULT_FENCES, FENCE_TARGETS, fenceRulesError, type FenceResult, type FenceRule, type FenceRules, type FenceTarget, type FieldKind } from './fences'

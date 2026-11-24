@@ -1,10 +1,11 @@
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
-import { parse as parseYaml } from 'yaml'
 import type * as M from 'mdast'
 import { inlinesToText, type Block, type CalloutFold, type Inline, type InlineLink, type ListItem } from '@dumpster/schema'
 import { stripComments } from './comments'
+import { applyFence, DEFAULT_FENCES, type FenceRules } from './fences'
+import { fillQuoteFences } from './quoteFence'
 import { createSlugger, slugifyHeading } from './slug'
 import {
   IMAGE_EXTENSIONS,
@@ -24,6 +25,7 @@ export interface ParseContext {
   resolveAsset?: (name: string) => { src: string } | null // ![[x.png]] → 배포용 경로 (못 찾음 = null)
   selfId?: string | null // [[#헤딩]] 같은 문서 안 링크
   lineOffset?: number // 경고의 줄 번호에 더할 값 (떼어낸 frontmatter 줄 수) — 옵시디언에서 보는 줄 번호와 맞춘다
+  fences?: FenceRules // 펜스 매핑 덮어쓰기 (플레이그라운드의 저장 전 초안). 없으면 fences.json
 }
 
 export interface BodyRef {
@@ -84,7 +86,8 @@ class Converter {
     body: string,
     private ctx: ParseContext,
   ) {
-    const { text, tree } = this.removeComments(body.replace(/\r\n?/g, '\n'))
+    // 콜아웃 안 펜스의 빠진 '>'를 먼저 채운다 — 주석 지우기가 코드 범위를 제대로 알아야 코드 안 %%를 지킨다
+    const { text, tree } = this.removeComments(fillQuoteFences(body.replace(/\r\n?/g, '\n')).text)
     this.src = text
     this.tree = tree
     walk(tree, (n) => {
@@ -229,15 +232,18 @@ class Converter {
   private code(node: M.Code): Block {
     this.checkFence(node)
     const language = node.lang ?? null
-    if (language?.toLowerCase() === 'cardlink') {
-      const bookmark = this.cardlink(node.value)
-      if (bookmark) return bookmark
+    // ```언어 → 블록 (fences.json). 매핑이 실패하면 코드 블록 그대로
+    const rule = language ? (this.ctx.fences ?? DEFAULT_FENCES)[language.toLowerCase()] : undefined
+    if (rule) {
+      const r = applyFence(rule, node.value)
+      if (r.ok) return r.block
+      this.warn(`${language} 펜스 → ${rule.block}: ${r.reason} → 코드 블록으로 둠`)
     }
     return { type: 'code', language, text: node.value }
   }
 
-  // 함정 ①: 인용·콜아웃 안 코드펜스에서 '>'가 빠진 줄이 있으면 CommonMark(=옵시디언)는 거기서 인용과 코드를 끝낸다.
-  // 고치지 않고 옵시디언과 같게 두되, 닫히지 않은 펜스는 경고로 알린다.
+  // 닫는 펜스가 아예 없는 코드 — 인용 안이면 인용 끝에서, 밖이면 문서 끝에서 코드가 끝난다.
+  // ('>' 빠진 줄 때문에 끊긴 콜아웃 펜스는 fillQuoteFences가 미리 이어 붙인다)
   private checkFence(node: M.Code) {
     const lines = this.src.slice(node.position?.start.offset ?? 0, node.position?.end.offset ?? 0).split('\n')
     const open = /^(`{3,}|~{3,})/.exec(lines[0])
@@ -245,32 +251,7 @@ class Converter {
     const close = new RegExp(`^\\${open[1][0]}{${open[1].length},}[ \\t]*$`)
     if (lines.length > 1 && close.test(lines[lines.length - 1].replace(/^[ \t>]*/, ''))) return
     const line = (node.position?.start.line ?? 0) + (this.ctx.lineOffset ?? 0)
-    this.warn(`${line}번째 줄 코드 펜스가 안 닫힘 (인용·콜아웃 안이면 '>' 빠진 줄 때문일 수 있음)`)
-  }
-
-  // ```cardlink (auto-card-link 플러그인) — 본문이 YAML
-  private cardlink(value: string): Block | null {
-    let data: unknown = null
-    try {
-      data = parseYaml(value)
-    } catch {
-      // 아래에서 url 없음으로 처리
-    }
-    const d = data && typeof data === 'object' && !Array.isArray(data) ? (data as Record<string, unknown>) : {}
-    const str = (key: string) => (typeof d[key] === 'string' && d[key].trim() ? d[key].trim() : null)
-    const href = str('url')
-    if (!href) {
-      this.warn('cardlink에 url 없음 → 코드 블록으로 둠')
-      return null
-    }
-    return {
-      type: 'bookmark',
-      href,
-      title: str('title') ?? str('host') ?? href,
-      description: str('description') ?? '',
-      icon: str('favicon'),
-      image: str('image'),
-    }
+    this.warn(`${line}번째 줄 코드 펜스가 안 닫힘`)
   }
 
   private table(node: M.Table): Block {
