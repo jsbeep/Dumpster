@@ -25,6 +25,7 @@ export type TableAlign = 'left' | 'center' | 'right' | null
 
 export type CalloutFold = 'none' | 'open' | 'closed' // [!x] / [!x]+ / [!x]-
 
+// heading.anchor: 문서 안에서 유일하다(파서가 겹치면 -1, -2를 붙임). InlineLink.heading도 같은 slug라 그대로 비교하면 된다
 export type Block =
   | { type: 'heading'; level: 1 | 2 | 3 | 4 | 5 | 6; anchor: string; inlines: Inline[] }
   | { type: 'paragraph'; inlines: Inline[] }

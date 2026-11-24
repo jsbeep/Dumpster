@@ -66,5 +66,5 @@ console.log(`\n▦ 블록 ${[...blockCounts].sort((a, b) => b[1] - a[1]).map(([t
 
 console.log(
   `\n✔ ${relative(repoRoot, outFile)} — 컬렉션 ${graph.collections.length} · 문서 ${graph.docs.length} · 엣지 ${graph.edges.length}` +
-    ` · 이미지 ${assets.length}(새로 복사 ${copied}) · ${(json.length / 1024).toFixed(1)}KB · ${ms}ms`,
+    ` · 이미지 ${assets.length}(새로 복사 ${copied}) · ${(Buffer.byteLength(json) / 1024).toFixed(1)}KB · ${ms}ms`,
 )
