@@ -5,6 +5,7 @@
   "packageManager": "pnpm@12.16.1",
   "scripts": {
     "graph": "pnpm --filter @dumpster/builder graph",
+    "dev:playground": "pnpm --filter @dumpster/playground dev",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --if-present test"
   }

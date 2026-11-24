@@ -1,0 +1,39 @@
+/* 블록 렌더러 공통 테마 — 색 단계(--c-*)는 tailwind.preset.cjs가 만들고, 여기는 그 밖의 값.
+   쓰는 쪽: 앱 CSS에서 @tailwind 앞에 @import '@dumpster/blocks/theme.css' (또는 main.tsx에서 import).
+   @layer·@apply를 안 쓰는 이유: 이 파일이 @tailwind 지시어 없이 따로 처리돼도 깨지지 않게 */
+
+:root {
+  color-scheme: light;
+  --font-sans: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Apple SD Gothic Neo',
+    'Noto Sans KR', 'Noto Sans CJK KR', 'Malgun Gothic', ui-sans-serif, system-ui, sans-serif;
+  /* 고정폭 글꼴엔 한글이 없는 경우가 많다 — 코드 속 한글 주석이 아무 글꼴로나 떨어지지 않게 본문 한글 글꼴을 generic 앞에 */
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'D2Coding', 'Noto Sans Mono CJK KR',
+    'Pretendard Variable', Pretendard, 'Apple SD Gothic Neo', 'Noto Sans KR', 'Malgun Gothic', monospace;
+  --page-bg: #ffffff;
+  /* 코드 블록 — slate 단계를 쓰면 다크에서 뒤집히므로 전용 변수. 라이트는 노션·velog처럼 옅은 회색 */
+  --code-bg: #f7f7f5;
+  --code-fg: #37352f;
+  --code-muted: #9b9a97;
+  --code-border: #e9e9e7;
+  --scrollbar: #d1d5db;
+  --scrollbar-hover: #9ca3af;
+}
+
+/* 다크 = Obsidian 기본 다크: 페이지 #1e1e1e, 카드 #262626. .dark를 html이 아닌 요소에 달아도 그 안만 다크가 된다 */
+.dark {
+  color-scheme: dark;
+  --page-bg: #1e1e1e;
+  /* 페이지(#1e1e1e)·카드(#262626) 어느 쪽 위에서도 구분되게 둘보다 어둡게 */
+  --code-bg: #181818;
+  --code-fg: #dcddde;
+  --code-muted: #8a8a8a;
+  --code-border: #303030;
+  --scrollbar: #454545;
+  --scrollbar-hover: #5c5c5c;
+}
+
+/* Chrome·Firefox 둘 다 표준 속성을 안다 — 코드·표의 가로 스크롤바를 얇고 테마 색으로 */
+.dumpster-blocks * {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
+}
