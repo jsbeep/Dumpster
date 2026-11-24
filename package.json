@@ -1,0 +1,11 @@
+{
+  "name": "dumpster",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.16.1",
+  "scripts": {
+    "graph": "pnpm --filter @dumpster/builder graph",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r --if-present test"
+  }
+}
