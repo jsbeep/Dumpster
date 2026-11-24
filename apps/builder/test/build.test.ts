@@ -133,9 +133,14 @@ describe('공개 범위', () => {
     expect(graph.docs.some((d) => d.title === '통장 비번')).toBe(false)
     const edge = graph.edges.find((e) => e.source === doc('고정 IP 설정').id && e.relation === 'see_also')
     expect(edge).toMatchObject({ target: null, targetLabel: '통장 비번' })
+    // 본문 [[통장 비번]]도 같은 규칙 — 결과물에선 없는 문서([[공유기 설정]])와 똑같이 생겼다
+    const bodyEdge = (from: string, label: string) =>
+      graph.edges.find((e) => e.source === doc(from).id && e.relation === 'link' && e.targetLabel === label)
+    expect(bodyEdge('고정 IP 설정', '통장 비번')).toMatchObject({ target: null, origin: 'body' })
+    expect(bodyEdge('회고 - 도커 쓸만한가', '공유기 설정')).toMatchObject({ target: null, origin: 'body' })
     // 비공개인지 없는 건지는 로컬 리포트에만
-    expect(report.privateRefs).toEqual(['고정 IP 설정 → [[통장 비번]] (see_also)'])
-    expect(report.missingRefs).toEqual(['공유기 비번 찾기 → [[공유기 설정]] (prev)'])
+    expect(report.privateRefs).toEqual(['고정 IP 설정 → [[통장 비번]] (see_also)', '고정 IP 설정 → [[통장 비번]] (link)'])
+    expect(report.missingRefs).toEqual(['공유기 비번 찾기 → [[공유기 설정]] (prev)', '회고 - 도커 쓸만한가 → [[공유기 설정]] (link)'])
   })
 
   it('하위 폴더는 자동으로 공개되지 않는다', () => {

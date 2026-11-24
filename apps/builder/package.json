@@ -9,6 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@dumpster/markdown": "workspace:*",
     "@dumpster/schema": "workspace:*",
     "yaml": "^2.6.1"
   },

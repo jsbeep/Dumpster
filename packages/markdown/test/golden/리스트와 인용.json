@@ -1,0 +1,370 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "리스트",
+      "inlines": [
+        {
+          "text": "리스트"
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        {
+          "inlines": [
+            {
+              "text": "첫째"
+            }
+          ],
+          "children": [
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                {
+                  "inlines": [
+                    {
+                      "text": "둘째 단계"
+                    }
+                  ],
+                  "children": [
+                    {
+                      "type": "list",
+                      "ordered": false,
+                      "items": [
+                        {
+                          "inlines": [
+                            {
+                              "text": "셋째 단계"
+                            }
+                          ],
+                          "children": [
+                            {
+                              "type": "list",
+                              "ordered": false,
+                              "items": [
+                                {
+                                  "inlines": [
+                                    {
+                                      "text": "넷째 단계 (실제 볼트 최대 깊이)"
+                                    }
+                                  ],
+                                  "children": []
+                                }
+                              ]
+                            }
+                          ]
+                        }
+                      ]
+                    }
+                  ]
+                },
+                {
+                  "inlines": [
+                    {
+                      "text": "다시 둘째 "
+                    },
+                    {
+                      "text": "굵게",
+                      "bold": true
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "inlines": [
+            {
+              "text": "줄바꿈 한 번으로\n이어 쓴 항목"
+            }
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "ordered": true,
+      "start": 1,
+      "items": [
+        {
+          "inlines": [
+            {
+              "text": "순서 있는 목록"
+            }
+          ],
+          "children": []
+        },
+        {
+          "inlines": [
+            {
+              "text": "두 번째"
+            }
+          ],
+          "children": [
+            {
+              "type": "list",
+              "ordered": true,
+              "start": 1,
+              "items": [
+                {
+                  "inlines": [
+                    {
+                      "text": "안쪽 번호"
+                    }
+                  ],
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "중간 문단이 끊어서 아래는 새 목록"
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "ordered": true,
+      "start": 3,
+      "items": [
+        {
+          "inlines": [
+            {
+              "text": "셋부터 시작"
+            }
+          ],
+          "children": []
+        },
+        {
+          "inlines": [
+            {
+              "text": "넷"
+            }
+          ],
+          "children": []
+        }
+      ]
+    },
+    {
+      "type": "list",
+      "ordered": false,
+      "items": [
+        {
+          "inlines": [
+            {
+              "text": "안 한 일"
+            }
+          ],
+          "checked": false,
+          "children": []
+        },
+        {
+          "inlines": [
+            {
+              "text": "한 일"
+            }
+          ],
+          "checked": true,
+          "children": [
+            {
+              "type": "list",
+              "ordered": false,
+              "items": [
+                {
+                  "inlines": [
+                    {
+                      "text": "하위 할 일"
+                    }
+                  ],
+                  "checked": false,
+                  "children": []
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "인용",
+      "inlines": [
+        {
+          "text": "인용"
+        }
+      ]
+    },
+    {
+      "type": "blockquote",
+      "children": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "text": "그냥 인용\n두 줄째"
+            }
+          ]
+        },
+        {
+          "type": "list",
+          "ordered": false,
+          "items": [
+            {
+              "inlines": [
+                {
+                  "text": "인용 안 리스트"
+                }
+              ],
+              "children": []
+            }
+          ]
+        },
+        {
+          "type": "code",
+          "language": "sh",
+          "text": "echo 인용 안 코드"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "콜아웃",
+      "inlines": [
+        {
+          "text": "콜아웃"
+        }
+      ]
+    },
+    {
+      "type": "callout",
+      "kind": "note",
+      "title": [],
+      "fold": "none",
+      "children": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "text": "제목 없는 콜아웃"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "callout",
+      "kind": "tip",
+      "title": [
+        {
+          "text": "펼쳐진 콜아웃"
+        }
+      ],
+      "fold": "open",
+      "children": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "text": "내용에 "
+            },
+            {
+              "text": "굵게",
+              "bold": true
+            },
+            {
+              "text": "와 "
+            },
+            {
+              "text": "도커 설치",
+              "link": {
+                "kind": "doc",
+                "docId": "doc:도커 설치"
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "callout",
+      "kind": "abstract",
+      "title": [
+        {
+          "text": "접힌 콜아웃 안 코드"
+        }
+      ],
+      "fold": "closed",
+      "children": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "text": "설명 한 줄"
+            }
+          ]
+        },
+        {
+          "type": "code",
+          "language": "ts",
+          "text": "const a = 1\nconst b = 2"
+        }
+      ]
+    },
+    {
+      "type": "callout",
+      "kind": "warning",
+      "title": [
+        {
+          "text": "대문자 종류"
+        }
+      ],
+      "fold": "none",
+      "children": [
+        {
+          "type": "callout",
+          "kind": "info",
+          "title": [
+            {
+              "text": "콜아웃 안 콜아웃"
+            }
+          ],
+          "fold": "none",
+          "children": [
+            {
+              "type": "paragraph",
+              "inlines": [
+                {
+                  "text": "안쪽 내용"
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "refs": [
+    {
+      "label": "도커 설치",
+      "relation": "link",
+      "target": "doc:도커 설치"
+    }
+  ],
+  "warnings": []
+}

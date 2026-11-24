@@ -1,0 +1,197 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "①-콜아웃-안-코드펜스에서-가-빠진-줄",
+      "inlines": [
+        {
+          "text": "① 콜아웃 안 코드펜스에서 "
+        },
+        {
+          "text": ">",
+          "code": true
+        },
+        {
+          "text": "가 빠진 줄"
+        }
+      ]
+    },
+    {
+      "type": "callout",
+      "kind": "abstract",
+      "title": [
+        {
+          "text": "메타데이터 예시"
+        }
+      ],
+      "fold": "closed",
+      "children": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "text": "노션에서 복사한 속성"
+            }
+          ]
+        },
+        {
+          "type": "code",
+          "language": "yaml",
+          "text": "title: 블로그 문서"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "tags: [메모, 설계]"
+        }
+      ]
+    },
+    {
+      "type": "blockquote",
+      "children": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "text": "createdAt: 2026-11-20"
+            }
+          ]
+        },
+        {
+          "type": "code",
+          "language": null,
+          "text": "콜아웃 끝 문장"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "②-표-안-ab",
+      "inlines": [
+        {
+          "text": "② 표 안 "
+        },
+        {
+          "text": "[[a\\|b]]",
+          "code": true
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "align": [
+        null,
+        null
+      ],
+      "header": [
+        [
+          {
+            "text": "문서"
+          }
+        ],
+        [
+          {
+            "text": "메모"
+          }
+        ]
+      ],
+      "rows": [
+        [
+          [
+            {
+              "text": "도커",
+              "link": {
+                "kind": "doc",
+                "docId": "doc:도커 설치"
+              }
+            }
+          ],
+          [
+            {
+              "text": "별칭의 "
+            },
+            {
+              "text": "|",
+              "code": true
+            },
+            {
+              "text": "는 이스케이프해야 표가 안 깨짐"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "OS 설치",
+              "link": {
+                "kind": "doc",
+                "docId": "doc:OS 설치"
+              }
+            }
+          ],
+          [
+            {
+              "text": "별칭 없음"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "③-붙여넣은-html",
+      "inlines": [
+        {
+          "text": "③ 붙여넣은 HTML"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "<div class=\"min-w-0 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm\">\n  <p class=\"text-sm font-semibold text-slate-900\">요금제 비교</p>\n  <span class=\"text-xs text-slate-500\">월 9,900원\n연 99,000원</span>\n</div>"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "④-이미지를-파일-이름만으로",
+      "inlines": [
+        {
+          "text": "④ 이미지를 파일 이름만으로"
+        }
+      ]
+    },
+    {
+      "type": "image",
+      "src": "assets/Pasted image 20261120093000.png",
+      "alt": "Pasted image 20261120093000.png",
+      "width": null,
+      "height": null
+    }
+  ],
+  "refs": [
+    {
+      "label": "도커 설치",
+      "relation": "link",
+      "target": "doc:도커 설치"
+    },
+    {
+      "label": "OS 설치",
+      "relation": "link",
+      "target": "doc:OS 설치"
+    }
+  ],
+  "warnings": [
+    "4번째 줄 코드 펜스가 안 닫힘 (인용·콜아웃 안이면 '>' 빠진 줄 때문일 수 있음)",
+    "8번째 줄 코드 펜스가 안 닫힘 (인용·콜아웃 안이면 '>' 빠진 줄 때문일 수 있음)"
+  ]
+}

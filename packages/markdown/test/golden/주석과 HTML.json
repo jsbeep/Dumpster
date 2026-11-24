@@ -1,0 +1,115 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "주석-",
+      "inlines": [
+        {
+          "text": "주석 ("
+        },
+        {
+          "text": "%%",
+          "code": true
+        },
+        {
+          "text": ")"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "주석은 편집 화면에서만 보인다 이 문장은 이어져야 함\n윗줄이 주석만 있던 줄이라 이 줄은 같은 문단으로 붙는다"
+        }
+      ]
+    },
+    {
+      "type": "blockquote",
+      "children": [
+        {
+          "type": "paragraph",
+          "inlines": [
+            {
+              "text": "인용 안 주석 도 사라짐"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "인라인 코드 안은 글자 "
+        },
+        {
+          "text": "100%%",
+          "code": true
+        },
+        {
+          "text": " 그대로"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "html-주석",
+      "inlines": [
+        {
+          "text": "HTML 주석"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "문장 안  주석도 사라짐"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "생-html",
+      "inlines": [
+        {
+          "text": "생 HTML"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "문장 안 <span style=\"color:red\">빨간 글씨</span> 태그는 글자 그대로, \n은 줄바꿈"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "닫히지-않은-주석",
+      "inlines": [
+        {
+          "text": "닫히지 않은 주석"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "여기까지 보이고"
+        }
+      ]
+    }
+  ],
+  "refs": [],
+  "warnings": [
+    "닫는 %% 없음 → 문서 끝까지 주석으로 지움"
+  ]
+}

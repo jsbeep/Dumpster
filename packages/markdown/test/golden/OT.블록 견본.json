@@ -1,0 +1,837 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "이-컬렉션은",
+      "inlines": [
+        {
+          "text": "이 컬렉션은"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "docs/design.md §4 표의 문법을 한 번씩 다 쓰고, 함정 4개를 실제 볼트 모양 그대로 재현해둔 곳\n정답: 파서 단독은 "
+        },
+        {
+          "text": "packages/markdown/test/golden/*.json",
+          "code": true
+        },
+        {
+          "text": ", 볼트 통합은 "
+        },
+        {
+          "text": "apps/builder/test/blocks.test.ts",
+          "code": true
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "language": null,
+      "text": "● OT.블록 견본\n● 글자와 문단\n● 리스트와 인용\n● 표와 코드\n● 이미지와 임베드\n● 주석과 HTML\n● 함정 모음"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "무엇을-어디서-확인하나",
+      "inlines": [
+        {
+          "text": "무엇을 어디서 확인하나"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "align": [
+        null,
+        null,
+        null,
+        null
+      ],
+      "header": [
+        [
+          {
+            "text": "#"
+          }
+        ],
+        [
+          {
+            "text": "확인할 것"
+          }
+        ],
+        [
+          {
+            "text": "어디서"
+          }
+        ],
+        [
+          {
+            "text": "기대"
+          }
+        ]
+      ],
+      "rows": [
+        [
+          [
+            {
+              "text": "1"
+            }
+          ],
+          [
+            {
+              "text": "#",
+              "code": true
+            },
+            {
+              "text": "~"
+            },
+            {
+              "text": "####",
+              "code": true
+            },
+            {
+              "text": ", 같은 제목 두 번"
+            }
+          ],
+          [
+            {
+              "text": "글자와 문단"
+            }
+          ],
+          [
+            {
+              "text": "heading, 앵커 "
+            },
+            {
+              "text": "헤딩",
+              "code": true
+            },
+            {
+              "text": " / "
+            },
+            {
+              "text": "헤딩-1",
+              "code": true
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "2"
+            }
+          ],
+          [
+            {
+              "text": "줄바꿈 1번 = 줄바꿈"
+            }
+          ],
+          [
+            {
+              "text": "글자와 문단"
+            }
+          ],
+          [
+            {
+              "text": "한 문단 안에 "
+            },
+            {
+              "text": "\\n",
+              "code": true
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "3"
+            }
+          ],
+          [
+            {
+              "text": "**",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "*",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "`",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "~~",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "==",
+              "code": true
+            },
+            {
+              "text": ", 겹친 서식"
+            }
+          ],
+          [
+            {
+              "text": "글자와 문단"
+            }
+          ],
+          [
+            {
+              "text": "플래그는 true만, 같은 서식은 합침"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "4"
+            }
+          ],
+          [
+            {
+              "text": "~한 개~",
+              "code": true
+            },
+            {
+              "text": ", 띄운 "
+            },
+            {
+              "text": "==",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "글자와 문단"
+            }
+          ],
+          [
+            {
+              "text": "그냥 글자"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "5"
+            }
+          ],
+          [
+            {
+              "text": "[[문서]]",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "[[문서|별칭]]",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "[[문서#헤딩]]",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "[[#헤딩]]",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "글자와 문단"
+            }
+          ],
+          [
+            {
+              "text": "link{doc} + link 엣지, 글자 = 문서 / 별칭 / "
+            },
+            {
+              "text": "문서 > 헤딩",
+              "code": true
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "6"
+            }
+          ],
+          [
+            {
+              "text": "없는 문서·비공개 문서 링크"
+            }
+          ],
+          [
+            {
+              "text": "글자와 문단"
+            }
+          ],
+          [
+            {
+              "text": "둘 다 docId null (구분 안 됨)"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "7"
+            }
+          ],
+          [
+            {
+              "text": "문장 끝 "
+            },
+            {
+              "text": "^block-id",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "글자와 문단"
+            }
+          ],
+          [
+            {
+              "text": "숨김 + 경고"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "8"
+            }
+          ],
+          [
+            {
+              "text": "수식 "
+            },
+            {
+              "text": "$",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "$$",
+              "code": true
+            },
+            {
+              "text": ", 각주"
+            }
+          ],
+          [
+            {
+              "text": "글자와 문단"
+            }
+          ],
+          [
+            {
+              "text": "unsupported / 글자 + 경고"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "9"
+            }
+          ],
+          [
+            {
+              "text": "탭 들여쓰기 4단 리스트, 이어 쓴 항목"
+            }
+          ],
+          [
+            {
+              "text": "리스트와 인용"
+            }
+          ],
+          [
+            {
+              "text": "list 안 list 안 list"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "10"
+            }
+          ],
+          [
+            {
+              "text": "1.",
+              "code": true
+            },
+            {
+              "text": " / "
+            },
+            {
+              "text": "3.",
+              "code": true
+            },
+            {
+              "text": "부터 / "
+            },
+            {
+              "text": "- [ ]",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "- [x]",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "리스트와 인용"
+            }
+          ],
+          [
+            {
+              "text": "start, checked"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "11"
+            }
+          ],
+          [
+            {
+              "text": "인용 안 리스트·코드"
+            }
+          ],
+          [
+            {
+              "text": "리스트와 인용"
+            }
+          ],
+          [
+            {
+              "text": "blockquote{children}"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "12"
+            }
+          ],
+          [
+            {
+              "text": "콜아웃 "
+            },
+            {
+              "text": "[!note]",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "[!tip]+",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "[!abstract]-",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "[!WARNING]",
+              "code": true
+            },
+            {
+              "text": ", 콜아웃 안 콜아웃"
+            }
+          ],
+          [
+            {
+              "text": "리스트와 인용"
+            }
+          ],
+          [
+            {
+              "text": "callout{kind 소문자, title, fold}"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "13"
+            }
+          ],
+          [
+            {
+              "text": "표 정렬, 셀 "
+            },
+            {
+              "text": "<br>",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "표와 코드"
+            }
+          ],
+          [
+            {
+              "text": "table, 셀 안 "
+            },
+            {
+              "text": "\\n",
+              "code": true
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "14"
+            }
+          ],
+          [
+            {
+              "text": "코드 언어 있음/없음, 코드 안 "
+            },
+            {
+              "text": "%%",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "표와 코드"
+            }
+          ],
+          [
+            {
+              "text": "code, "
+            },
+            {
+              "text": "%%",
+              "code": true
+            },
+            {
+              "text": " 그대로"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "15"
+            }
+          ],
+          [
+            {
+              "text": "```cardlink",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "표와 코드"
+            }
+          ],
+          [
+            {
+              "text": "bookmark"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "16"
+            }
+          ],
+          [
+            {
+              "text": "![[x.png|447]]",
+              "code": true
+            },
+            {
+              "text": " "
+            },
+            {
+              "text": "|447x300",
+              "code": true
+            },
+            {
+              "text": ", 문장 중간 이미지, 바깥 이미지"
+            }
+          ],
+          [
+            {
+              "text": "이미지와 임베드"
+            }
+          ],
+          [
+            {
+              "text": "image{src: assets/해시, width, height}, 문단 쪼갬"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "17"
+            }
+          ],
+          [
+            {
+              "text": "없는 이미지"
+            }
+          ],
+          [
+            {
+              "text": "이미지와 임베드"
+            }
+          ],
+          [
+            {
+              "text": "unsupported"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "18"
+            }
+          ],
+          [
+            {
+              "text": "![[문서]]",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "이미지와 임베드"
+            }
+          ],
+          [
+            {
+              "text": "embed + embed 엣지"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "19"
+            }
+          ],
+          [
+            {
+              "text": "%%주석%%",
+              "code": true
+            },
+            {
+              "text": " 인라인·한 줄·여러 줄·인용 안·닫히지 않음"
+            }
+          ],
+          [
+            {
+              "text": "주석과 HTML"
+            }
+          ],
+          [
+            {
+              "text": "흔적 없이 삭제"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "20"
+            }
+          ],
+          [
+            {
+              "text": "<!-- -->",
+              "code": true
+            },
+            {
+              "text": ", 생 HTML 태그, "
+            },
+            {
+              "text": "<br>",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "주석과 HTML"
+            }
+          ],
+          [
+            {
+              "text": "주석 삭제, 태그는 글자, br은 줄바꿈"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "21"
+            }
+          ],
+          [
+            {
+              "text": "함정 ① 콜아웃 코드펜스에 "
+            },
+            {
+              "text": ">",
+              "code": true
+            },
+            {
+              "text": " 빠진 줄"
+            }
+          ],
+          [
+            {
+              "text": "함정 모음"
+            }
+          ],
+          [
+            {
+              "text": "옵시디언(CommonMark)처럼 거기서 콜아웃이 끊김 + 경고"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "22"
+            }
+          ],
+          [
+            {
+              "text": "함정 ② 표 안 "
+            },
+            {
+              "text": "[[a|b]]",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "함정 모음"
+            }
+          ],
+          [
+            {
+              "text": "셀 하나에 별칭 링크"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "23"
+            }
+          ],
+          [
+            {
+              "text": "함정 ③ 붙여넣은 "
+            },
+            {
+              "text": "<div class=\"...\">",
+              "code": true
+            }
+          ],
+          [
+            {
+              "text": "함정 모음"
+            }
+          ],
+          [
+            {
+              "text": "문단 글자 (HTML로 안 그림)"
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "24"
+            }
+          ],
+          [
+            {
+              "text": "함정 ④ "
+            },
+            {
+              "text": "_image/",
+              "code": true
+            },
+            {
+              "text": " 안 이미지를 이름만으로"
+            }
+          ],
+          [
+            {
+              "text": "함정 모음"
+            }
+          ],
+          [
+            {
+              "text": "image, 공개 폴더 아래만 찾음"
+            }
+          ]
+        ]
+      ]
+    }
+  ],
+  "refs": [],
+  "warnings": []
+}

@@ -1,0 +1,165 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "표",
+      "inlines": [
+        {
+          "text": "표"
+        }
+      ]
+    },
+    {
+      "type": "table",
+      "align": [
+        "left",
+        "center",
+        "right",
+        null
+      ],
+      "header": [
+        [
+          {
+            "text": "왼쪽"
+          }
+        ],
+        [
+          {
+            "text": "가운데"
+          }
+        ],
+        [
+          {
+            "text": "오른쪽"
+          }
+        ],
+        [
+          {
+            "text": "기본"
+          }
+        ]
+      ],
+      "rows": [
+        [
+          [
+            {
+              "text": "셀 안\n줄바꿈"
+            }
+          ],
+          [
+            {
+              "text": "형광",
+              "highlight": true
+            }
+          ],
+          [
+            {
+              "text": "굵게",
+              "bold": true
+            }
+          ],
+          [
+            {
+              "text": "코드",
+              "code": true
+            }
+          ]
+        ],
+        [
+          [
+            {
+              "text": "두\n번째"
+            }
+          ],
+          [
+            {
+              "text": "OS 설치",
+              "link": {
+                "kind": "doc",
+                "docId": "doc:OS 설치"
+              }
+            }
+          ],
+          [],
+          [
+            {
+              "text": "빈 칸 왼쪽"
+            }
+          ]
+        ]
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "코드",
+      "inlines": [
+        {
+          "text": "코드"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "language": "ts",
+      "text": "function hello(name: string) {\n  return `안녕 ${name}`\n}"
+    },
+    {
+      "type": "code",
+      "language": null,
+      "text": "언어 없는 코드"
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "코드 안의 "
+        },
+        {
+          "text": "%%",
+          "code": true
+        },
+        {
+          "text": "는 주석이 아니라 글자 (배치 파일)"
+        }
+      ]
+    },
+    {
+      "type": "code",
+      "language": "bat",
+      "text": "for %%i in (*.txt) do echo %%i"
+    },
+    {
+      "type": "code",
+      "language": "mermaid",
+      "text": "graph LR\n  A --> B"
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "카드-링크-auto-card-link-플러그인",
+      "inlines": [
+        {
+          "text": "카드 링크 (auto-card-link 플러그인)"
+        }
+      ]
+    },
+    {
+      "type": "bookmark",
+      "href": "https://obsidian.md/",
+      "title": "Obsidian - Sharpen your thinking",
+      "description": "The free and flexible app for your private thoughts.",
+      "icon": "https://obsidian.md/favicon.ico",
+      "image": "https://obsidian.md/images/banner.png"
+    }
+  ],
+  "refs": [
+    {
+      "label": "OS 설치",
+      "relation": "link",
+      "target": "doc:OS 설치"
+    }
+  ],
+  "warnings": []
+}

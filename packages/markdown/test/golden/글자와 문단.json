@@ -1,0 +1,280 @@
+{
+  "blocks": [
+    {
+      "type": "heading",
+      "level": 1,
+      "anchor": "글자와-문단",
+      "inlines": [
+        {
+          "text": "글자와 문단"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "헤딩",
+      "inlines": [
+        {
+          "text": "헤딩"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 3,
+      "anchor": "셋째-단계",
+      "inlines": [
+        {
+          "text": "셋째 단계"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 4,
+      "anchor": "넷째-단계",
+      "inlines": [
+        {
+          "text": "넷째 단계"
+        }
+      ]
+    },
+    {
+      "type": "heading",
+      "level": 2,
+      "anchor": "헤딩-1",
+      "inlines": [
+        {
+          "text": "헤딩"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "옵시디언은 줄바꿈 한 번이 그대로 줄바꿈\n그래서 이 줄은 위 줄과 같은 문단인데 줄은 바뀌어 보여야 함\n빈 줄을 넣어야 문단이 나뉜다"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "굵게",
+          "bold": true
+        },
+        {
+          "text": " "
+        },
+        {
+          "text": "기울임",
+          "italic": true
+        },
+        {
+          "text": " "
+        },
+        {
+          "text": "코드",
+          "code": true
+        },
+        {
+          "text": " "
+        },
+        {
+          "text": "취소선",
+          "strike": true
+        },
+        {
+          "text": " "
+        },
+        {
+          "text": "하이라이트",
+          "highlight": true
+        },
+        {
+          "text": " 한 줄에 다\n겹친 것: "
+        },
+        {
+          "text": "굵은 기울임",
+          "bold": true,
+          "italic": true
+        },
+        {
+          "text": ", "
+        },
+        {
+          "text": "굵은 ",
+          "bold": true
+        },
+        {
+          "text": "코드",
+          "bold": true,
+          "code": true
+        },
+        {
+          "text": ", "
+        },
+        {
+          "text": "형광 안에 ",
+          "highlight": true
+        },
+        {
+          "text": "굵게",
+          "bold": true,
+          "highlight": true
+        },
+        {
+          "text": " 섞기",
+          "highlight": true
+        },
+        {
+          "text": "\n물결 하나 ~이건 취소선 아님~ 이고 a == b 처럼 띄운 등호도 그냥 글자"
+        }
+      ]
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "바깥 링크 "
+        },
+        {
+          "text": "위키백과",
+          "link": {
+            "kind": "url",
+            "href": "https://ko.wikipedia.org"
+          }
+        },
+        {
+          "text": " 와 맨 주소 "
+        },
+        {
+          "text": "https://example.com",
+          "link": {
+            "kind": "url",
+            "href": "https://example.com"
+          }
+        },
+        {
+          "text": "\n문서 링크 "
+        },
+        {
+          "text": "도커 설치",
+          "link": {
+            "kind": "doc",
+            "docId": "doc:도커 설치"
+          }
+        },
+        {
+          "text": " / 별칭 "
+        },
+        {
+          "text": "도커 깔기",
+          "link": {
+            "kind": "doc",
+            "docId": "doc:도커 설치"
+          }
+        },
+        {
+          "text": " / 헤딩 "
+        },
+        {
+          "text": "도커 설치 > 설치 명령",
+          "link": {
+            "kind": "doc",
+            "docId": "doc:도커 설치",
+            "heading": "설치-명령"
+          }
+        },
+        {
+          "text": " / 같은 문서 "
+        },
+        {
+          "text": "셋째 단계",
+          "link": {
+            "kind": "doc",
+            "docId": "doc:self",
+            "heading": "셋째-단계"
+          }
+        },
+        {
+          "text": "\n없는 문서 "
+        },
+        {
+          "text": "아직 안 쓴 글",
+          "link": {
+            "kind": "doc",
+            "docId": null
+          }
+        },
+        {
+          "text": ", 비공개 문서 "
+        },
+        {
+          "text": "통장 비번",
+          "link": {
+            "kind": "doc",
+            "docId": null
+          }
+        },
+        {
+          "text": "\n문장 끝 블록 ID는 옵시디언처럼 숨김"
+        }
+      ]
+    },
+    {
+      "type": "hr"
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "수식은 아직 못 그림 인라인 $E = mc^2$ 그리고 블록"
+        }
+      ]
+    },
+    {
+      "type": "unsupported",
+      "raw": "$$\n\\int_0^1 x^2 \\, dx\n$$",
+      "reason": "수식"
+    },
+    {
+      "type": "paragraph",
+      "inlines": [
+        {
+          "text": "각주도 아직[^1]"
+        }
+      ]
+    },
+    {
+      "type": "unsupported",
+      "raw": "[^1]: 각주 본문",
+      "reason": "각주"
+    }
+  ],
+  "refs": [
+    {
+      "label": "도커 설치",
+      "relation": "link",
+      "target": "doc:도커 설치"
+    },
+    {
+      "label": "아직 안 쓴 글",
+      "relation": "link",
+      "target": null
+    },
+    {
+      "label": "통장 비번",
+      "relation": "link",
+      "target": null
+    }
+  ],
+  "warnings": [
+    "블록 ID 숨김 (블록 참조 미지원): ^block-1",
+    "인라인 수식 미지원 → 글자 그대로: $E = mc^2$",
+    "수식 블록 미지원 → 원문 그대로",
+    "각주 미지원 → 원문 그대로"
+  ]
+}
