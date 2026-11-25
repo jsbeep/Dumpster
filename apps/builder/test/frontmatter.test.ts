@@ -48,6 +48,8 @@ describe('normalizeMeta', () => {
   it('빈 값들은 빈 배열·null로', () => {
     const warnings: string[] = []
     expect(normalizeMeta({ prev: null, tags: null, aliases: null, description: null }, (w) => warnings.push(w))).toEqual({
+      oid: null,
+      draft: false,
       kind: 'doc',
       prev: null,
       branch: [],
@@ -66,6 +68,25 @@ describe('normalizeMeta', () => {
     expect(meta.seeAlso).toEqual(['a'])
     expect(meta.tags).toEqual(['설계', 'blog'])
     expect(normalizeMeta({ see_also: ['[[a]]', '[[b]]'] }, () => {}).seeAlso).toEqual(['a', 'b'])
+  })
+
+  it.each([
+    ['6aeb0b8091f37a98e7007350', '6aeb0b8091f37a98e7007350', 0], // ObjectId (템플릿)
+    ['6AEB0B8091F37A98E7007350', '6aeb0b8091f37a98e7007350', 0], // 대문자는 소문자로
+    ['C7CE98FB-B9A7-452A-8EE2-B02BAEF62861', 'c7ce98fb-b9a7-452a-8ee2-b02baef62861', 0], // UUID도 받음
+    [Infinity, null, 1], // 따옴표 없는 674512300e1234…가 숫자로 읽힌 경우
+    ["<% Math.floor(Date.now() / 1000).toString(16) %>", null, 1], // Templater가 안 돌았음
+    ['6aeb0b80', null, 1], // 짧음
+    [null, null, 0], // 없음 — 경고는 빌더가 '임시 ID'로 냄
+  ])('oid %j → %j (경고 %i)', (input, expected, warnCount) => {
+    const warnings: string[] = []
+    expect(normalizeMeta({ oid: input }, (w) => warnings.push(w)).oid).toBe(expected)
+    expect(warnings).toHaveLength(warnCount)
+  })
+
+  it('태그 draft(대소문자·# 무관)면 draft', () => {
+    expect(normalizeMeta({ tags: ['#Draft', '홈서버'] }, () => {}).draft).toBe(true)
+    expect(normalizeMeta({ tags: ['drafts'] }, () => {}).draft).toBe(false)
   })
 
   it('prev가 여러 개면 첫 번째 + 경고, 모르는 type은 doc + 경고', () => {

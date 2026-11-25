@@ -1,9 +1,10 @@
 ---
+oid: 6aff8d80f576eda2f2a00982
 type: manifest
 description: 마크다운 → 블록 변환(P2) 정답 확인용 견본 컬렉션
 tags:
   - 테스트
-createdAt: 2026-11-20-09:00
+createdAt: 2026-11-20T09:00
 ---
 ## 이 컬렉션은
 docs/design.md §4 표의 문법을 한 번씩 다 쓰고, 함정 4개를 실제 볼트 모양 그대로 재현해둔 곳

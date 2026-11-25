@@ -23,10 +23,12 @@ const doc = (title: string) => {
   if (!d) throw new Error(`문서 없음: ${title}`)
   return d
 }
+// 엣지 배열 순서는 ID 정렬이라 우연에 가깝다(oid는 hex) → 대상 이름순으로 맞춰 비교
 const edgesFrom = (title: string, relation: 'link' | 'embed') =>
   graph.edges
     .filter((e) => e.source === doc(title).id && e.relation === relation)
     .map((e) => [e.targetLabel, e.target, e.origin])
+    .sort((a, b) => String(a[0]).localeCompare(String(b[0]), 'ko'))
 
 // 코드가 아닌 모든 글자 (렌더러가 글자로 보여줄 것들)
 const visibleTexts = (blocks: Block[]): string[] => {
@@ -112,8 +114,8 @@ describe('Doc.blocks / Doc.text', () => {
 describe('본문 링크·임베드 → 엣지 (origin body)', () => {
   it('홈서버 구축기 본문 링크 (탐색 시나리오의 push 대상)', () => {
     expect(edgesFrom('용량 부족 사태', 'link')).toEqual([
+      ['외장 SSD 달기', doc('외장 SSD 달기').id, 'body'], // 'ko' 정렬은 한글이 영문보다 앞
       ['OS 설치', doc('OS 설치').id, 'body'],
-      ['외장 SSD 달기', doc('외장 SSD 달기').id, 'body'],
     ])
     expect(edgesFrom('HTTPS 인증서', 'link')).toEqual([['Nextcloud 올리기', doc('Nextcloud 올리기').id, 'body']])
     expect(edgesFrom('회고 - 도커 쓸만한가', 'link')).toEqual([['공유기 설정', null, 'body']])
@@ -121,16 +123,16 @@ describe('본문 링크·임베드 → 엣지 (origin body)', () => {
 
   it('다른 컬렉션 문서도 이름으로 찾고, 같은 문서를 여러 번 걸어도 엣지는 하나, 자기 자신 [[#헤딩]]은 엣지 없음', () => {
     expect(edgesFrom('글자와 문단', 'link')).toEqual([
+      ['도커 설치', doc('도커 설치').id, 'body'],
       ['아직 안 쓴 글', null, 'body'],
       ['통장 비번', null, 'body'],
-      ['도커 설치', doc('도커 설치').id, 'body'],
     ])
   })
 
   it('![[문서]] → embed 엣지, 블록의 docId = 엣지 target', () => {
     expect(edgesFrom('이미지와 임베드', 'embed')).toEqual([
-      ['아직 안 쓴 글', null, 'body'],
       ['글자와 문단', doc('글자와 문단').id, 'body'],
+      ['아직 안 쓴 글', null, 'body'],
     ])
     expect(doc('이미지와 임베드').blocks.filter((b) => b.type === 'embed')).toEqual([
       { type: 'embed', docId: doc('글자와 문단').id, label: '글자와 문단' },
@@ -143,6 +145,7 @@ describe('본문 링크·임베드 → 엣지 (origin body)', () => {
       '글자와 문단 → [[통장 비번]] (link)',
       '고정 IP 설정 → [[통장 비번]] (see_also)',
       '고정 IP 설정 → [[통장 비번]] (link)',
+      '회고 - 도커 쓸만한가 → [[몰래 쓰는 중]] (see_also) — draft', // draft도 비공개와 같은 칸, 표시만 다름
     ])
     expect(report.missingRefs).toEqual([
       '이미지와 임베드 → ![[없는 그림.png]] (image)',

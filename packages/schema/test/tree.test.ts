@@ -4,6 +4,7 @@ import {
   compareSiblings,
   docIdOf,
   edgeIdOf,
+  isOid,
   slugify,
   stampOf,
   treeToText,
@@ -72,6 +73,17 @@ describe('트리 인덱스 — 짜가 볼트 밖의 경우', () => {
     )
   })
 
+  it('줄 끝 표시(mark)는 표시가 있는 줄에만, 다른 표시(⚠) 뒤에 붙는다', () => {
+    const index = buildGraphIndex(
+      graphOf([makeDoc('M', { kind: 'manifest' }), makeDoc('A'), makeDoc('B'), makeDoc('O')], [prev('A', 'M'), prev('B', 'A'), prev('O', null)], 'M'),
+    )
+    const marks: Record<string, string> = { A: '✏️ 본문', O: '🆕' }
+    expect(treeToText(index, 'c', (id) => marks[id] ?? null)).toBe(
+      ['● M', '● A  ✏️ 본문', '● B', '── 연결 안 됨 ──', '● O  ⚠ prev 대상 없음  🆕'].join('\n'),
+    )
+    expect(treeToText(index, 'c')).toBe(['● M', '● A', '● B', '── 연결 안 됨 ──', '● O  ⚠ prev 대상 없음'].join('\n'))
+  })
+
   it('자기 자신을 prev로 둔 글도 순환', () => {
     const index = buildGraphIndex(graphOf([makeDoc('M', { kind: 'manifest' }), makeDoc('S')], [prev('S', 'S')], 'M'))
     expect(index.tree('c').orphans.map((r) => r.orphan)).toEqual(['cycle'])
@@ -111,6 +123,14 @@ describe('ID', () => {
     ['다듬기/편의성?', '다듬기편의성'],
   ])('slugify(%s) = %s', (input, expected) => {
     expect(slugify(input)).toBe(expected)
+  })
+
+  it('oid 판별: ObjectId(24 hex)와 UUID만', () => {
+    expect(isOid('6aeb0b8091f37a98e7007350')).toBe(true)
+    expect(isOid('c7ce98fb-b9a7-452a-8ee2-b02baef62861')).toBe(true)
+    expect(isOid('도커-설치-2611041940')).toBe(false)
+    expect(isOid('6aeb0b80')).toBe(false)
+    expect(stampOf('6aeb0b8091f37a98e7007350')).toBeNull()
   })
 
   it('스탬프는 KST 기준, 충돌 꼬리는 무시', () => {

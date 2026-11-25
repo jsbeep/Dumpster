@@ -25,7 +25,7 @@ apps/builder ── frontmatter·git 날짜·링크 해석 ──▶ graph.json 
 |---|---|
 | 11-24 | 공개 범위: 기본 비공개. 공개 폴더 목록은 `.env`에만 (레포에 안 남음) |
 | 11-24 | 볼트 레포는 private → 1단계는 Pi 로컬 빌드. CI로 옮기면 읽기 전용 PAT 필요 |
-| 11-24 | 문서 ID = 이름 + createdAt (`도커-설치-2611041940`) |
+| 11-24 | ~~문서 ID = 이름 + createdAt~~ → 11-25 **frontmatter `oid`** 로 바꿈 (아래) |
 | 11-24 | 정제본은 범위 밖. Dumpster = 쌩메모만 |
 | 11-24 | 탐색: 컬렉션 = 트리 한 컬럼(git graph식), **본류 없음**, 링크만 push |
 | 11-24 | 첫 화면 = 최근 업데이트(루트 MOC) + 컬렉션/태그 스위처 |
@@ -38,19 +38,44 @@ apps/builder ── frontmatter·git 날짜·링크 해석 ──▶ graph.json 
 | 11-25 | 블록 스타일은 데이터 — 각 View의 `STYLE` 상수 → `packages/blocks/src/styles.json` 한 파일. `BlockRenderer styles=`로 덮어쓰기 |
 | 11-25 | 펜스 매핑은 데이터 — `cardlink` 하드코딩 → `packages/markdown/src/fences.json`. 대상 블록·필드 표(`FENCE_TARGETS`)만 코드 |
 | 11-25 | 플레이그라운드 라이브 탭의 문서·이미지 해석 = 짜가 볼트를 번들에 넣고 빌더와 같은 규칙 (graph.json·서버 안 씀) |
+| 11-25 | **글 더 쓰기 전에 frontmatter 확정** — 빌드 때 추측하던 걸 글 쓸 때 Templater가 박는다 (템플릿은 §2) |
+| 11-25 | 문서 ID = `oid` (ObjectId 24 hex, 따옴표 없음). 이름·createdAt을 바꿔도 그대로. 없거나 이상하면 옛 방식 임시 ID + 경고 |
+| 11-25 | 글 숨기기 = 태그 `draft` (속성 따로 안 만듦). 비공개 문서와 똑같이 취급 |
+| 11-25 | `createdAt` 형식 = `YYYY-MM-DDTHH:mm` (ISO, 옵시디언 날짜 속성이 읽는 형식). 옛 형식도 계속 읽는다 |
+| 11-25 | 매니페스트 = `type: manifest` 유지 (템플릿이 넣으니 쓸 일 없음). `description`으로 판별하는 안은 기각 |
+| 11-25 | 증분 빌드 안 함 (전체가 빠르고 결정적). 대신 **이전 graph.json과 비교 리포트** — 새로 공개·수정·ID 바뀜·사라짐 |
+| 11-25 | 삭제된 글은 흔적 없이 사라진다 (무덤 기록 안 남김 — 공개 내리려고 지웠을 수도). 결과물에선 없는 문서와 같음 |
 
 ---
 
 ## 2. 속성(frontmatter) → 노드
 
+### 템플릿 (볼트 `템플릿/`, Templater로 넣어야 `<% %>`가 실행됨)
+
+```yaml
+# manifest_template                                   # doc_template
+---                                                   ---
+oid: <% Math.floor(Date.now() / 1000)…join('') %>     oid: <% 같은 식 %>
+type: manifest                                        prev:
+description:                                          tags:
+tags:                                                 createdAt: <% tp.date.now("YYYY-MM-DDTHH:mm") %>
+createdAt: <% tp.date.now("YYYY-MM-DDTHH:mm") %>      ---
+---
+```
+
+oid 식 전체: `Math.floor(Date.now() / 1000).toString(16).padStart(8, '0') + Array.from(crypto.getRandomValues(new Uint8Array(8)), (b) => b.toString(16).padStart(2, '0')).join('')`.
+따옴표가 없어도 앞자리가 `6b…`인 동안(2028-06까지)은 늘 글자로 읽힌다. 그 뒤 `6e`+숫자뿐이거나 `70…`부터 숫자만 나오면(한 글당 약 0.003%) YAML이 숫자로 읽어 원래 값을 잃는다 → 빌더가 경고, 그 글만 따옴표로.
+템플릿에 없는 것: `order`·`see_also`·`aliases`·`type: moc`는 필요할 때만 직접. `updatedAt`(git이 앎)·`collection`(폴더가 앎)·`next`(역참조)·`branch`(본류 없음)는 안 쓴다.
+
 | 키 | 규칙 |
 |---|---|
+| `oid` | **문서 ID.** ObjectId(24 hex) 또는 UUID, 소문자로. 숫자로 읽혔거나 `<% %>`가 남았거나 형식이 이상하면 임시 ID + 경고 |
 | `prev` | `"[[제목]]"` 하나. → `prev` 엣지. **다음 글은 역참조로만** (이전 글을 고치지 않는다) |
 | `type` | `manifest` / `moc` / 없으면 `doc`. 모르는 값은 doc + 경고 |
 | `order` | lexorank (`a` < `am` < `b`). 형제 정렬에만 씀 |
-| `createdAt` | `2026-11-11-14:01` · `2026-07-10T22:45:00` · `2026-07-07` · 오프셋 있는 ISO → 전부 `+09:00` ISO. 없으면 git 첫 커밋 → 파일 mtime |
-| `updatedAt` | (속성 아님) git 마지막 커밋 → mtime |
-| `tags` | `null`→`[]`, `#` 제거, 중복 제거 |
+| `createdAt` | 새 템플릿 `2026-11-25T14:01`. 옛 형식 `2026-11-11-14:01` · `2026-07-10T22:45:00` · `2026-07-07` · 오프셋 있는 ISO도 → 전부 `+09:00` ISO. 없으면 git 첫 커밋 → 파일 mtime |
+| `updatedAt` | (속성 아님) git 마지막 커밋. **커밋 안 된 수정·새 파일이면 파일 mtime** (`git status` 한 번) |
+| `tags` | `null`→`[]`, `#` 제거, 중복 제거. **`draft`가 있으면 그 글은 비공개와 똑같이** (내용·ID 안 나감, 거는 링크는 null, 리포트에만 `— draft`) |
 | `aliases` | 링크 해석에 씀 (파일 이름이 우선) |
 | `see_also` / `branch` | 문자열·리스트 둘 다 → 엣지. 트리에는 안 씀 |
 | `description` | 매니페스트 → 컬렉션 설명 |
@@ -59,7 +84,10 @@ apps/builder ── frontmatter·git 날짜·링크 해석 ──▶ graph.json 
 - **건너뛰기**: 0바이트 파일(make-md 폴더 노트 등), `.`으로 시작하는 폴더.
 - **링크 해석**: 옵시디언처럼 이름으로 — 파일 이름 > 별칭, 같은 폴더 > 짧은 경로. 대소문자 무시.
 - **비공개**: 비공개 파일은 내용을 읽지 않는다. 비공개 문서로 가는 링크는 없는 문서와 똑같이 `target: null` (존재 여부도 안 샌다). 어느 쪽인지는 콘솔 리포트에만.
-- **ID**: `slugify(이름)-yyMMddHHmm(KST)`. 이름을 바꾸면 ID도 바뀌므로 탐색기는 URL을 스탬프(`stampOf`)로 한 번 더 찾는다. 충돌하면 `-2`.
+- **ID**: `oid`. 없거나 이상하면 임시 ID `slugify(이름)-yyMMddHHmm(KST)` (이름을 바꾸면 바뀌므로 탐색기는 임시 ID URL만 스탬프 `stampOf`로 한 번 더 찾는다).
+  겹치면(사본 만들기·복붙) **먼저 생긴 글이 갖는다**: createdAt → git 첫 커밋 → 경로가 짧은 쪽(사본은 ` 1`이 붙어 김) → 경로. 나중 글은 임시 ID(또 겹치면 `-2`) + 경고. 이 순서가 빌드마다 같아서 새 글이 생겨도 기존 글 ID가 안 바뀐다.
+- **빌드 비교** ([apps/builder/src/diff.ts](../apps/builder/src/diff.ts)): `pnpm graph`가 덮어쓰기 전 `out/graph.json`과 비교해 🆕 새로 공개 · ✏️ 수정(제목·컬렉션·본문·속성·prev·링크) · 🔁 ID 바뀜(같은 컬렉션·같은 제목 — 옛 글에 oid를 달 때) · 🗑 사라짐(삭제·비공개 이동·draft·목록에서 뺌)을 콘솔에 찍는다. 🆕·✏️·🔁는 **트리 줄 끝에**(어느 갈래에서 바뀌었는지 보이게, 첫 빌드는 표시 안 함), 트리에 자리가 없는 🗑만 아래 목록으로. ID가 바뀐 글을 가리키는 글은 '바뀜'으로 안 잡히게 옛 ID를 새 ID로 맞춘 뒤 비교.
+  시나리오 테스트 14개: [apps/builder/test/scenario.test.ts](../apps/builder/test/scenario.test.ts) (진짜 git 임시 볼트, 커밋 시각 고정).
 
 계약: [packages/schema/src/graph.ts](../packages/schema/src/graph.ts)
 
@@ -226,6 +254,7 @@ fixtures/vault/  짜가 볼트 — 홈서버 구축기(트리) · 시즌2(중첩
 | P2 | 마크다운 파서 | fixture별 정답 JSON, 미지원 문법 리포트, `%%`·카나리아 유출 0 | ✅ 11-25 (markdown 89 · builder 51) |
 | P3 | 렌더러 + 테마 | 모든 블록 라이트/다크 스크린샷 | ✅ 11-25 (blocks 6, Firefox 스크린샷) |
 | P3.5 | 플레이그라운드 + 함정 ① | 갤러리 + 라이브 md→블록 + 스타일·펜스 매핑 저장 | ✅ 11-25 (테스트 170, Firefox 조작 17) |
+| P3.6 | frontmatter 확정 + 빌드 비교 | oid·draft·T 형식, 짜가 볼트 반영, 수정·삭제 시나리오 테스트 | ✅ 11-25 (테스트 197) |
 | P4 | 탐색기 | 매니페스트의 탐색 시나리오 표를 e2e로 | |
 | P5 | 배포 (gh-pages) | 실제 URL, 비공개 문서·`%%` 0건 | |
 
@@ -255,6 +284,8 @@ graph.json이 블록 때문에 12KB → 563KB(실제 볼트)로 커짐 → P4/P5
 
 - graph.json 크기 (위 부하 표)
 - 계약 제안 (P3): `embed.heading?` (`![[문서#헤딩]]`), `image.caption?` — 탐색기에서 필요해지면
+- 실제 볼트 옛 글 oid 채우기 — 사용자가 직접 (공개 글 19개 중 18개 `oid 없음` 경고, 1개는 속성 없음). 채우고 `pnpm graph`하면 비교 리포트에 🔁 ID 바뀜으로 묶여 나온다
+- 보이는 제목 규칙 미정: 파일 이름에 못 쓰는 글자(`/` 등)를 `-`로 바꾸면 파일 이름과 같아지는 별칭을 제목으로 쓸지 (`다듬기-편의성-설정탭` → `다듬기/편의성/설정탭`)
 
 ---
 

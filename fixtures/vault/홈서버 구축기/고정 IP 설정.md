@@ -1,4 +1,5 @@
 ---
+oid: 6ae9de540d816905afab2d4b
 prev: "[[OS 설치]]"
 see_also: "[[통장 비번]]"
 tags:

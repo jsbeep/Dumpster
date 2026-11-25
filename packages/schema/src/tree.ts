@@ -198,7 +198,8 @@ export function buildGraphIndex(graph: Graph): GraphIndex {
 }
 
 // CLI·테스트용 텍스트 렌더. 탐색기는 같은 TreeRow로 진짜 UI를 그린다
-export function treeToText(index: GraphIndex, collectionId: string): string {
+// mark: 줄 끝에 붙일 표시 (CLI의 빌드 비교 🆕·✏️·🔁). 줄 끝이라 트리 세로선이 안 흐트러진다
+export function treeToText(index: GraphIndex, collectionId: string, mark?: (docId: string) => string | null): string {
   const tree = index.tree(collectionId)
   const title = (id: string) => index.docsById.get(id)?.title ?? id
   const line = (row: TreeRow) => {
@@ -206,7 +207,8 @@ export function treeToText(index: GraphIndex, collectionId: string): string {
     const connector = row.branch === 'mid' ? '├─' : row.branch === 'last' ? '└─' : ''
     const from = row.continuesFrom ? `  ↰ ${title(row.continuesFrom)}` : ''
     const orphan = row.orphan ? `  ⚠ ${ORPHAN_LABEL[row.orphan]}` : ''
-    return `${prefix}${connector}● ${title(row.docId)}${from}${orphan}`
+    const extra = mark?.(row.docId)
+    return `${prefix}${connector}● ${title(row.docId)}${from}${orphan}${extra ? `  ${extra}` : ''}`
   }
   const lines = tree.rows.map(line)
   if (tree.orphans.length) lines.push('── 연결 안 됨 ──', ...tree.orphans.map(line))

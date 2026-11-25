@@ -47,9 +47,9 @@ describe('트리 (매니페스트에 적은 모양 그대로)', () => {
     )
   })
 
-  it('시즌2 — 다른 컬렉션에서 이어진 글은 루트로, 출처 표시', () => {
+  it('시즌2 — 다른 컬렉션에서 이어진 글은 루트로, 출처 표시. 사본도 진짜 글이라 갈래가 된다', () => {
     expect(treeToText(index, '홈서버-구축기/시즌2')).toBe(
-      ['● OT.홈서버 시즌2', '● k3s 도전기  ↰ 회고 - 도커 쓸만한가', '● 노드 하나 더'].join('\n'),
+      ['● OT.홈서버 시즌2', '● k3s 도전기  ↰ 회고 - 도커 쓸만한가', '├─● 노드 하나 더', '└─● 노드 하나 더 1'].join('\n'),
     )
   })
 
@@ -85,24 +85,43 @@ describe('트리 (매니페스트에 적은 모양 그대로)', () => {
   })
 })
 
-describe('문서 ID = 이름 + createdAt', () => {
-  it('형식별 createdAt이 같은 규칙으로 스탬프가 된다', () => {
-    expect(doc('도커 설치').id).toBe('도커-설치-2611041940')
-    expect(doc('라즈베리파이 고르기').id).toBe('라즈베리파이-고르기-2611020000') // 날짜만
-    expect(doc('OS 설치').id).toBe('os-설치-2611031000') // ISO
-    expect(doc('OS 설치').createdAt).toBe('2026-11-03T10:00:00+09:00')
-    expect(doc('회고 - 도커 쓸만한가').id).toBe('회고-도커-쓸만한가-2611122350')
-  })
+describe('문서 ID = oid', () => {
+  const warned = (title: string, text: string) =>
+    report.warnings.some((w) => w.includes(`/${title}.md: `) && w.includes(text))
 
-  it('같은 분에 만든 글도 이름이 달라 안 겹친다', () => {
-    expect(doc('자막 깨짐').id).toBe('자막-깨짐-2611102130')
-    expect(doc('하드웨어 트랜스코딩').id).toBe('하드웨어-트랜스코딩-2611102130')
+  it('oid가 있으면 그게 ID (createdAt 형식과 무관)', () => {
+    expect(doc('도커 설치').id).toBe('6aeb0b8091f37a98e7007350')
+    expect(doc('자막 깨짐').id).toBe('6af30e48820e88b4177c55d4')
+    expect(doc('하드웨어 트랜스코딩').id).toBe('6af30e48c7a0219c71a90f01') // 같은 분에 만든 글
     expect(new Set(graph.docs.map((d) => d.id)).size).toBe(graph.docs.length)
   })
 
-  it('createdAt 없으면 git(여기선 고정값) 날짜', () => {
+  it('createdAt 형식 4종이 같은 규칙으로 정규화된다', () => {
+    expect(doc('라즈베리파이 고르기').createdAt).toBe('2026-11-02T00:00:00+09:00') // 날짜만
+    expect(doc('OS 설치').createdAt).toBe('2026-11-03T10:00:00+09:00') // ISO 초
+    expect(doc('고정 IP 설정').createdAt).toBe('2026-11-03T22:15:00+09:00') // 옛 템플릿 '-'
+    expect(doc('도커 설치').createdAt).toBe('2026-11-04T19:40:00+09:00') // 새 템플릿 'T'
+  })
+
+  it('oid가 없거나 이상하면 임시 ID(이름+createdAt) + 경고', () => {
+    expect(doc('공유기 비번 찾기').id).toBe('공유기-비번-찾기-2611040900')
+    expect(warned('공유기 비번 찾기', 'oid 없음')).toBe(true)
+    expect(doc('닭과 달걀 A').id).toBe('닭과-달걀-a-2611081000')
+    expect(warned('닭과 달걀 A', '<% %>')).toBe(true) // Templater가 안 돌았음
+    expect(doc('닭과 달걀 B').id).toBe('닭과-달걀-b-2611081005')
+    expect(warned('닭과 달걀 B', '숫자(Infinity)')).toBe(true) // 따옴표 없는 oid가 숫자로 읽힘
+  })
+
+  it('createdAt도 없으면 git(여기선 고정값) 날짜로 임시 ID', () => {
     expect(doc('전원 어댑터 메모').id).toBe('전원-어댑터-메모-2611241200')
     expect(stampOf(doc('전원 어댑터 메모').id)).toBe('2611241200')
+    expect(stampOf(doc('도커 설치').id)).toBeNull() // oid엔 스탬프 없음
+  })
+
+  it('사본 만들기로 oid가 겹치면 원본(경로가 짧은 쪽)이 갖고 사본은 임시 ID', () => {
+    expect(doc('노드 하나 더').id).toBe('6af92e40b250593477a0dbf2')
+    expect(doc('노드 하나 더 1').id).toBe('노드-하나-더-1-2611151300')
+    expect(warned('노드 하나 더 1', "'홈서버 구축기/시즌2/노드 하나 더.md'와 겹침")).toBe(true)
   })
 })
 
@@ -139,8 +158,22 @@ describe('공개 범위', () => {
     expect(bodyEdge('고정 IP 설정', '통장 비번')).toMatchObject({ target: null, origin: 'body' })
     expect(bodyEdge('회고 - 도커 쓸만한가', '공유기 설정')).toMatchObject({ target: null, origin: 'body' })
     // 비공개인지 없는 건지는 로컬 리포트에만
-    expect(report.privateRefs).toEqual(['고정 IP 설정 → [[통장 비번]] (see_also)', '고정 IP 설정 → [[통장 비번]] (link)'])
+    expect(report.privateRefs).toEqual([
+      '고정 IP 설정 → [[통장 비번]] (see_also)',
+      '고정 IP 설정 → [[통장 비번]] (link)',
+      '회고 - 도커 쓸만한가 → [[몰래 쓰는 중]] (see_also) — draft',
+    ])
     expect(report.missingRefs).toEqual(['공유기 비번 찾기 → [[공유기 설정]] (prev)', '회고 - 도커 쓸만한가 → [[공유기 설정]] (link)'])
+  })
+
+  it('태그 draft인 글은 비공개와 똑같이: 내용·ID 0, 거는 링크는 null, 트리에도 없음', () => {
+    expect(JSON.stringify(graph)).not.toContain('드래프트-카나리아')
+    expect(graph.docs.some((d) => d.title === '몰래 쓰는 중')).toBe(false)
+    expect(report.drafts).toEqual([{ relPath: '홈서버 구축기/몰래 쓰는 중.md', id: '6af717e03fe41b1a65b87a8d' }])
+    expect(JSON.stringify(graph)).not.toContain(report.drafts[0].id)
+    const edge = graph.edges.find((e) => e.source === doc('회고 - 도커 쓸만한가').id && e.targetLabel === '몰래 쓰는 중')
+    expect(edge).toMatchObject({ target: null, relation: 'see_also' })
+    expect(index.nextOf.get(doc('도커 설치').id)).toHaveLength(3) // draft는 네 번째 갈래가 안 됨
   })
 
   it('하위 폴더는 자동으로 공개되지 않는다', () => {
@@ -151,7 +184,7 @@ describe('공개 범위', () => {
 
   it('0바이트 폴더 노트는 건너뛴다', () => {
     expect(report.skipped).toEqual([{ relPath: '홈서버 구축기/홈서버 구축기.md', reason: '빈 파일 (폴더 노트 등)' }])
-    expect(graph.docs).toHaveLength(24)
+    expect(graph.docs).toHaveLength(25) // 홈서버 구축기 21 (draft 제외) + 시즌2 4
   })
 
   it('없는 폴더를 공개 목록에 적으면 리포트', () => {

@@ -1,5 +1,5 @@
 import { parse as parseYaml } from 'yaml'
-import type { DocKind } from '@dumpster/schema'
+import { isOid, type DocKind } from '@dumpster/schema'
 import { normalizeCreatedAt } from './dates'
 
 export interface SplitResult {
@@ -27,6 +27,8 @@ export function splitFrontmatter(raw: string): SplitResult {
 }
 
 export interface DocMeta {
+  oid: string | null // 소문자. 없거나 형식이 이상하면 null (빌더가 임시 ID를 씀)
+  draft: boolean // 태그 'draft' → 비공개와 똑같이 취급
   kind: DocKind
   prev: string | null // [[ ]] 안의 대상 이름
   branch: string[]
@@ -54,6 +56,24 @@ function toList(value: unknown): unknown[] {
 }
 
 const uniq = (xs: string[]) => [...new Set(xs)]
+
+// 템플릿은 oid를 따옴표 없이 쓴다. 지금(앞자리 6b…)은 늘 글자로 읽히지만, 2028-06 이후 '6e' 뒤가 전부 숫자거나
+// '70…'부터 숫자만 나오면 YAML이 숫자로 읽는다 — 그때는 원래 값을 되살릴 수 없어서 그 글만 따옴표로 감싸야 한다
+function normalizeOid(value: unknown, warn: (msg: string) => void): string | null {
+  if (value === null || value === undefined || value === '') return null
+  if (typeof value === 'number') {
+    warn(`oid가 숫자(${value})로 읽힘 → 임시 ID. 이 글만 oid를 따옴표로 감싸세요`)
+    return null
+  }
+  const oid = String(value).trim().toLowerCase()
+  if (isOid(oid)) return oid
+  warn(
+    oid.includes('<%')
+      ? 'oid에 <% %>가 그대로 남음(Templater가 아닌 기본 템플릿으로 넣은 듯) → 임시 ID'
+      : `oid 형식이 이상함(${oid.slice(0, 30)}) → 임시 ID`,
+  )
+  return null
+}
 
 export function normalizeMeta(data: Record<string, unknown> | null, warn: (msg: string) => void): DocMeta {
   const d = data ?? {}
@@ -88,6 +108,8 @@ export function normalizeMeta(data: Record<string, unknown> | null, warn: (msg: 
   }
 
   return {
+    oid: normalizeOid(d.oid, warn),
+    draft: tags.some((t) => t.toLowerCase() === 'draft'),
     kind,
     prev: prevs[0] ?? null,
     branch: links('branch'),

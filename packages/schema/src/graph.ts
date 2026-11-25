@@ -27,7 +27,7 @@ export interface Collection {
 export type DocKind = 'manifest' | 'moc' | 'doc'
 
 export interface Doc {
-  id: string // 이름 + createdAt: '도커-설치-2611041940' (docIdOf 참고)
+  id: string // frontmatter oid('6aeb0b8091f37a98e7007350'). 없으면 임시 ID '도커-설치-2611041940' (id.ts 참고)
   title: string // 파일 이름 (.md 제외)
   aliases: string[]
   collectionId: string
