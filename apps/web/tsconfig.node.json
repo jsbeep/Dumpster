@@ -3,5 +3,6 @@
   "compilerOptions": {
     "types": ["node"]
   },
-  "include": ["vite.config.ts"]
+  // test/는 Node에서 돈다 — 시나리오 테스트가 빌더(Node 전용)로 짜가 볼트 그래프를 만든다
+  "include": ["vite.config.ts", "test"]
 }
