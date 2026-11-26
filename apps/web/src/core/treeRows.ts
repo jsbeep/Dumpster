@@ -38,3 +38,11 @@ export function stepRow(ix: GraphIndex, view: View, folds: Record<string, string
   const i = ids.indexOf(from)
   return i < 0 ? null : (ids[i + d] ?? null)
 }
+
+// 브레드크럼 (P4.4) — 그 글까지 오면서 거친 분기점(같은 컬렉션 안에서 갈래가 둘 이상 갈라진 글), 위에서부터.
+// 트리에서 들여쓰기가 한 칸 늘어나는 곳 = 폴더 경로. 그 글 자신은 안 넣는다 (본문에선 제목이 바로 아래)
+export function forkTrail(ix: GraphIndex, id: string): string[] {
+  const cid = ix.docsById.get(id)?.collectionId
+  if (!cid) return []
+  return ix.ancestors(id).filter((a) => (ix.nextOf.get(a) ?? []).filter((n) => n.collectionId === cid).length >= 2)
+}

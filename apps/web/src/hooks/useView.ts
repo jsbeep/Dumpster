@@ -29,9 +29,9 @@ export interface Dir {
 }
 const STILL: Dir = { main: 0, rel: 0 }
 
-// 이전 글로 가면 왼쪽에서, 그 밖(다음 글·새 탭·바로가기)은 오른쪽에서. 탭 사이 이동은 탭 순서대로
+// 이전 글·조상 글(브레드크럼의 분기점)로 가면 왼쪽에서, 그 밖(다음 글·새 탭·바로가기)은 오른쪽에서. 탭 사이 이동은 탭 순서대로
 function directionOf(ix: GraphIndex, a: View, action: Action, b: View): Dir {
-  const back = (from: string | null, to: string | null) => (from && ix.prevOf.get(from) === to ? -1 : 1)
+  const back = (from: string | null, to: string | null) => (from && to && (ix.prevOf.get(from) === to || ix.ancestors(from).includes(to)) ? -1 : 1)
   let main = 0
   let rel = 0
   if (a.main !== b.main) main = action.type === 'step' ? back(a.main, b.main) : action.type === 'promote' ? 1 : 0

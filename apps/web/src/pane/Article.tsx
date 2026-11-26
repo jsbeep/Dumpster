@@ -1,20 +1,20 @@
 import { BlockRenderer, cx } from '@dumpster/blocks'
 import type { Doc, GraphIndex } from '@dumpster/schema'
-import { ArrowDownLeft, ArrowUpRight, CornerUpLeft, Folder } from 'lucide-react'
+import { ArrowDownLeft, ArrowUpRight, CornerUpLeft } from 'lucide-react'
 import { useCallback, type RefObject } from 'react'
 import { backlinks, outLinks } from '../core/links'
 import type { Action, Slot, View } from '../core/view'
 import type { Zoom } from '../Lightbox'
 import { DocLink } from '../ui/DocLink'
 import { ymd } from '../ui/format'
+import { Crumbs } from './Crumbs'
 import { Links } from './Links'
 import { Pager } from './Pager'
 import { frame } from './styles'
 
-// 칸 본문: 컬렉션 이름(→ 트리에서 보기) · 이어진 곳 · 제목 · 날짜·태그·↙↗ 개수 · 블록 · 이전/다음 카드 · 연결 목록
+// 칸 본문: 컬렉션 이름(→ 트리에서 보기, 트리가 안 보이면 브레드크럼 — Crumbs) · 이어진 곳 · 제목 · 날짜·태그·↙↗ 개수 · 블록 · 이전/다음 카드 · 연결 목록
 
 const styles = {
-  kick: '-ml-1.5 mt-3.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[12.5px] text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
   cfrom: 'mt-1.5 flex w-fit max-w-full items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-[12.5px] text-slate-500 transition-colors hover:text-slate-900',
   title: 'mt-2 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 [text-wrap:balance] @[560px]:text-[28px]',
   meta: 'mb-[26px] mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] tabular-nums text-slate-500',
@@ -28,6 +28,7 @@ interface Props {
   doc: Doc
   slot: Slot
   view: View
+  crumbs: boolean // 사이드바 트리가 화면에 없음 → 맨 위 줄을 브레드크럼으로
   articleRef: RefObject<HTMLElement> // 칸 폭 따라가기(useWidthFollow)·찾기가 재는 본문
   dispatch: (action: Action, anchor?: string) => void
   onJump: (anchor: string) => void // 이 칸 안의 그 id까지 스크롤
@@ -35,9 +36,8 @@ interface Props {
   onZoom: (z: Zoom) => void
 }
 
-export function Article({ ix, doc, slot, view, articleRef, dispatch, onJump, onReveal, onZoom }: Props) {
+export function Article({ ix, doc, slot, view, crumbs, articleRef, dispatch, onJump, onReveal, onZoom }: Props) {
   const onOpenDoc = useCallback((id: string, heading?: string) => dispatch({ type: 'link', id }, heading), [dispatch])
-  const col = ix.collectionsById.get(doc.collectionId)
   const prevId = ix.prevOf.get(doc.id)
   const prev = prevId ? ix.docsById.get(prevId) : undefined
   const crossPrev = prev && prev.collectionId !== doc.collectionId ? prev : undefined
@@ -54,10 +54,7 @@ export function Article({ ix, doc, slot, view, articleRef, dispatch, onJump, onR
         if (img && img.closest('figure') && !img.closest('a')) onZoom({ src: img.currentSrc || img.src, alt: img.alt })
       }}
     >
-      <button type="button" className={styles.kick} onClick={() => onReveal(doc.id)} data-tt="사이드바 트리에서 보기" data-nofind>
-        <Folder size={13} className="shrink-0" aria-hidden />
-        <span className="truncate">{col?.path.join(' › ')}</span>
-      </button>
+      <Crumbs ix={ix} doc={doc} trail={crumbs} onReveal={onReveal} onStep={(id) => dispatch({ type: 'step', slot, id })} />
       {crossPrev && (
         <DocLink id={crossPrev.id} onGo={() => dispatch({ type: 'step', slot, id: crossPrev.id })} className={styles.cfrom} data-cfrom data-nofind>
           <CornerUpLeft size={13} className="shrink-0" aria-hidden />

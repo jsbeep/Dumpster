@@ -89,7 +89,9 @@ export function Explorer({ store }: { store: Store }) {
   // 겹칠 때 위에 오는 순서: 왼쪽 칸일수록 위 (mongolive 밀러 컬럼 99 - 순서). 흐름 칸이 늘 맨 위
   const Z = { main: 40, left: 30, rel: 20, right: 10 }
   const onMenu = phone ? () => setDrawer(true) : undefined
-  const paneProps = { store, view, phone, flash, pending, dispatch, onReveal: revealDoc, onZoom: setZoom, onMenu }
+  // 사이드바 트리가 화면에 없으면(폰 서랍·떠 있는 사이드바·레일·접힘) 칸 본문 맨 위가 브레드크럼 (P4.4)
+  const crumbs = phone || sidebar.isOverlay || sidebar.mode !== 'full'
+  const paneProps = { store, view, phone, crumbs, flash, pending, dispatch, onReveal: revealDoc, onZoom: setZoom, onMenu }
   // 두 칸이 나란히면 흐름 칸은 반 — 띠가 몇 개든 흐름 칸 폭은 그대로, 띠는 연관 쪽에서만 빠진다
   const half = !phone && hasRel && !coll
 

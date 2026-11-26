@@ -31,6 +31,7 @@ interface Props {
   onMenu?: () => void // 폰: 머리 왼쪽 ☰ → 사이드바가 칸을 밀며 나온다
   z: number // 왼쪽 칸일수록 위 (mongolive 밀러 컬럼 99 - 순서) — 들어오는 칸이 흐름 칸 밑에서 빠져나온다
   phone: boolean
+  crumbs: boolean // 사이드바 트리가 화면에 없음 (폰·좁은 창·접은 사이드바) → 본문 맨 위를 브레드크럼으로
   focused: boolean // 지금 보는 칸 — 칸이 둘일 때 "흐름"/"연관" 글자가 진하게
   flash: Pulse | null
   pending: PendingHeading | null
@@ -103,7 +104,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
           <div className="relative flex min-h-0 flex-1">
             <div className={frame.scroll} ref={scrollRef} onScroll={onScroll} data-scroll>
               {doc ? (
-                <Article ix={ix} doc={doc} slot={slot} view={view} articleRef={articleRef} dispatch={dispatch} onJump={jump} onReveal={p.onReveal} onZoom={p.onZoom} />
+                <Article ix={ix} doc={doc} slot={slot} view={view} crumbs={p.crumbs} articleRef={articleRef} dispatch={dispatch} onJump={jump} onReveal={p.onReveal} onZoom={p.onZoom} />
               ) : doc === null || !meta ? (
                 <Gone />
               ) : null}

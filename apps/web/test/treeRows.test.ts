@@ -3,7 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { buildGraph } from '../../builder/src/build'
 import { descendants } from '../src/core/links'
-import { shownTree, stepRow } from '../src/core/treeRows'
+import { forkTrail, shownTree, stepRow } from '../src/core/treeRows'
 import type { View } from '../src/core/view'
 
 // 트리 보이는 행 · j/k (P4.3) — 짜가 볼트 그래프 그대로. 기대값은 ix.tree 순서에서 끌어낸다 (행 모양에 안 묶이게)
@@ -60,5 +60,26 @@ describe('j/k — 트리 보이는 행에서 한 줄', () => {
   })
   it('없는 글에서는 움직이지 않는다', () => {
     expect(stepRow(ix, at('도커 설치'), {}, 'nope', 1)).toBeNull()
+  })
+})
+
+describe('브레드크럼 — 거쳐 온 분기점', () => {
+  const titles = (ids: string[]) => ids.map((x) => ix.docsById.get(x)?.title)
+  it('트리 행의 forks > 1인 조상만, 위에서부터 (= 들여쓰기가 늘어나는 곳)', () => {
+    const forksOf = new Map(ix.tree(cid).rows.map((r) => [r.docId, r.forks]))
+    for (const r of ix.tree(cid).rows) {
+      const want = ix.ancestors(r.docId).filter((a) => (forksOf.get(a) ?? 0) > 1)
+      expect(forkTrail(ix, r.docId)).toEqual(want)
+    }
+  })
+  it('예: 용량 부족 사태 = 도커 설치 › 컨테이너 뭐 올리지, 줄기 글·매니페스트는 빈 줄', () => {
+    expect(titles(forkTrail(ix, id('용량 부족 사태')))).toEqual(['도커 설치', '컨테이너 뭐 올리지'])
+    expect(forkTrail(ix, id('고정 IP 설정'))).toEqual([])
+    expect(forkTrail(ix, id('OT.홈서버 구축기'))).toEqual([])
+  })
+  it('분기점 자신은 안 넣는다 · 다른 컬렉션에서 이어진 글은 그 컬렉션 안에서만', () => {
+    expect(forkTrail(ix, id('도커 설치'))).not.toContain(id('도커 설치'))
+    const s2 = graph.docs.find((d) => d.collectionId !== cid && ix.prevOf.get(d.id) && ix.docsById.get(ix.prevOf.get(d.id)!)?.collectionId === cid)
+    if (s2) expect(forkTrail(ix, s2.id).every((a) => ix.docsById.get(a)?.collectionId === s2.collectionId)).toBe(true)
   })
 })
