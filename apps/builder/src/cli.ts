@@ -36,7 +36,8 @@ if (existsSync(outFile)) {
 
 const started = performance.now()
 const { graph, report, assets } = buildGraph({ vaultDir, publicFolders })
-const json = JSON.stringify(graph, null, 2)
+// 한 파일 그대로, 공백만 뺀다 (11-26: 실제 볼트 gzip 약 70KB). 들여쓰기가 크기의 절반이었다
+const json = JSON.stringify(graph)
 mkdirSync(dirname(outFile), { recursive: true })
 writeFileSync(outFile, json + '\n')
 // 이미지: graph.json 옆 assets/<해시>.<ext>. 이름이 내용 해시라 이미 있으면 건너뛴다

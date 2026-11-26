@@ -6,6 +6,8 @@
   "scripts": {
     "graph": "pnpm --filter @dumpster/builder graph",
     "dev:playground": "pnpm --filter @dumpster/playground dev",
+    "dev:web": "pnpm --filter @dumpster/web dev",
+    "build:web": "pnpm --filter @dumpster/web build",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r --if-present test"
   }
