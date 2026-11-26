@@ -4,6 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, CornerUpLeft, Folder } from 'lucide-react'
 import { useCallback, type RefObject } from 'react'
 import { backlinks, outLinks } from '../core/links'
 import type { Action, Slot, View } from '../core/view'
+import type { Zoom } from '../Lightbox'
 import { DocLink } from '../ui/DocLink'
 import { ymd } from '../ui/format'
 import { Links } from './Links'
@@ -21,12 +22,6 @@ const styles = {
   count: 'inline-flex items-center gap-0.5 rounded px-1 -mx-1 font-medium text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
   gone: 'm-auto p-6 text-center text-[14px] text-slate-500',
 } as const
-
-// 그림 크게 보기에 넘기는 것
-export interface Zoom {
-  src: string
-  alt: string
-}
 
 interface Props {
   ix: GraphIndex

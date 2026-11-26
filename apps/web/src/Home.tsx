@@ -1,3 +1,4 @@
+import { cx } from '@dumpster/blocks'
 import type { GraphIndex } from '@dumpster/schema'
 import { m } from 'framer-motion'
 import { Menu } from 'lucide-react'
@@ -8,7 +9,6 @@ import { IconButton } from './ui/IconButton'
 import { SITE } from './ui/site'
 import { DocLink } from './ui/DocLink'
 import { md } from './ui/format'
-import { cx } from '@dumpster/blocks'
 
 // 첫 화면 — 컬렉션 카드 + 최근 글 (design.md 11-24). 칸 하나에 담는다. 폰은 머리에 ☰ (목록 열기)
 export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: boolean; onMenu?: () => void; onOpen: (id: string) => void }>(function Home(

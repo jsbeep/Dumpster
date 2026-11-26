@@ -1,9 +1,9 @@
+import { cx } from '@dumpster/blocks'
 import type { GraphIndex } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { Link2, PanelRightOpen, X } from 'lucide-react'
 import { forwardRef, useEffect, useRef, useState, type ReactElement } from 'react'
 import { paneVariants, popIn, QUICK } from './ui/motion'
-import { cx } from '@dumpster/blocks'
 import type { Action, View } from './core/view'
 
 // 띠 (design.md §3 "칸") — 46px 세로 줄, 사이드바 바탕색. 왼쪽 1px 선으로 이웃과 나뉜다 (11-27 평평한 판)

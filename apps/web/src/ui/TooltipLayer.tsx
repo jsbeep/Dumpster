@@ -1,7 +1,7 @@
 // mongolive components/common/TooltipLayer.tsx 그대로 — 컨트롤은 data-tt="설명"만 단다 (title 속성 대신)
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { DotLegend } from '../sidebar/Tree'
+import { DotLegend } from './dots'
 
 // ── 툴팁 레이어 ───────────────────────────────────────────────────────────────
 // 앱 전체에 하나만 마운트되는 툴팁. 각 컨트롤은 `data-tt="설명"` 속성만 달면 되고
