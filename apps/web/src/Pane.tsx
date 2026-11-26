@@ -1,6 +1,6 @@
 import { BlockRenderer, type BlockOf } from '@dumpster/blocks'
 import type { Doc, GraphIndex } from '@dumpster/schema'
-import { AnimatePresence, m } from 'framer-motion'
+import { AnimatePresence, cancelFrame, frame, m } from 'framer-motion'
 import {
   ArrowDownLeft,
   ArrowLeft,
@@ -16,7 +16,7 @@ import {
   SquareArrowUpRight,
   X,
 } from 'lucide-react'
-import { forwardRef, useCallback, useEffect, useRef, useState, type ReactNode } from 'react'
+import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { Store } from './data'
 import { backlinks, branchInfo, outLinks, sameCollection, seeAlso } from './links'
 import { paneVariants, popIn, SPRING_COLUMN } from './motion'
@@ -41,7 +41,7 @@ export const styles = {
   textBtn: 'h-7 shrink-0 whitespace-nowrap rounded-md px-2 text-[12px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700',
   headTitle: 'min-w-0 flex-1 truncate px-1.5 text-[13px] font-semibold text-slate-700',
   back: 'flex h-7 max-w-[46%] shrink-0 items-center gap-1 rounded-md pl-1 pr-2 text-[12.5px] text-slate-500 hover:bg-slate-100 hover:text-slate-800',
-  scroll: 'relative min-h-0 flex-1 overflow-y-auto overscroll-contain',
+  scroll: 'relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain',
   page: 'mx-auto max-w-[760px] pb-16 pl-[22px] pr-10 @[560px]:px-11 @[560px]:pb-[72px]',
   kick: '-ml-1.5 mt-3.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[12.5px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700',
   cfrom: 'mt-1.5 flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-[12.5px] text-slate-500 transition-colors hover:text-slate-700',
@@ -86,6 +86,7 @@ function useDoc(store: Store, id: string): Doc | null | undefined {
 }
 
 const SPY_TOP = 48 // 칸 위에서 이만큼 안에 들어온 헤딩 = 지금 읽는 곳
+const EDGE = 12 // 칸 폭이 바뀌는 도중 본문 글자와 칸 테두리 사이에 남길 최소 틈
 
 function scrollToEl(el: Element) {
   const sc = el.closest('[data-scroll]')
@@ -142,6 +143,129 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   }
 
   const onOpenDoc = useCallback((id: string, heading?: string) => dispatch({ type: 'link', id }, heading), [dispatch])
+
+  // ── 칸 폭이 바뀔 때 (탭 열기·닫기·접기·띠) — iOS push/pop 전환처럼 ──
+  // 애니메이션 동안 본문 폭 = 옛 폭과 새 폭 중 좁은 쪽 → 본문이 칸보다 넓어 양옆이 잘려 보이는 순간이 없다
+  //   넓어질 때: 옛(좁은) 폭·여백으로 묶었다가 움직이는 도중에 풀어서 한 번 줄바꿈 — 끝나고 툭 바뀌지 않게.
+  //             푸는 때 = 칸이 70%쯤 넓어졌고 새 폭 글자가 칸 안에 들어갈 때 (여백만 잘리는 건 안 보이니 봐줌)
+  //   좁아질 때: 묶지 않음 — 처음부터 새(좁은) 폭으로 줄바꿈
+  // 가운데 따라가기: 본문은 첫 프레임부터 '끝 자리'(새 칸 가운데)에 놓이고 칸의 보이는 가장자리만 스프링으로 움직인다 →
+  //   애니메이션 동안 매 프레임 칸의 '보이는 상자' 가운데를 재서 본문을 거기로 옮긴다 (framer 프레임 루프의 postRender —
+  //   framer가 그 프레임의 칸 transform을 쓴 뒤, 그리기 전). 칸 애니메이션이 끝나면 멈춘다
+  //   안 된 방법: 본문 layout="position"(옛/새 상자의 왼쪽 끝을 맞춰서 (옛 폭 − 새 폭)/2 어긋남),
+  //   따로 돈 스프링 x(칸 layout 애니메이션이 몇 프레임 늦게 시작해서 어긋남)
+  // 묶기는 그리기 전(useLayoutEffect)에 — 커밋 직후 첫 화면부터 옛 폭
+  const cardRef = useRef<HTMLElement | null>(null)
+  const articleRef = useRef<HTMLElement | null>(null)
+  const box = useRef<{ card: number; w: number; pl: string; pr: string } | null>(null)
+  const frozen = useRef(false)
+  const releaseAt = useRef(Infinity) // 칸의 보이는 폭이 이만큼 되면 묶기를 푼다
+  const unfreezeT = useRef(0)
+  const remember = () => {
+    const a = articleRef.current
+    const c = cardRef.current
+    if (!a || !c) return
+    const cs = getComputedStyle(a)
+    box.current = { card: c.offsetWidth, w: a.offsetWidth, pl: cs.paddingLeft, pr: cs.paddingRight }
+  }
+  const followX = useRef(0)
+  const follower = useRef<(() => void) | null>(null)
+  const stopFollow = () => {
+    if (follower.current) cancelFrame(follower.current)
+    follower.current = null
+    followX.current = 0
+    if (articleRef.current) articleRef.current.style.transform = ''
+  }
+  const startFollow = () => {
+    if (!follower.current) startTick() // 이미 따라가는 중이면 (연달아 바뀜) 같은 루프가 새 가운데를 따라간다
+    // 첫 프레임: framer는 커밋 직후 마이크로태스크에서 update·preRender·render만 바로 돌려(postRender 빠짐) 첫 그림에 칸 transform을 넣는다 →
+    //   그 뒤에 한 번 맞춘다. 그 마이크로태스크가 이것보다 늦게 줄 서 있을 수 있어서, 칸 transform이 바뀔 때까지 몇 번 미룬다
+    //   (끝내 안 바뀌면 = 이번 프레임은 framer 루프가 그린다 → postRender가 맞춘다)
+    const t0 = cardRef.current?.style.transform
+    let tries = 0
+    const first = () => {
+      if (!follower.current) return
+      if (cardRef.current?.style.transform === t0 && ++tries < 4) return queueMicrotask(first)
+      follower.current()
+    }
+    queueMicrotask(first)
+  }
+  const startTick = () => {
+    const tick = () => {
+      const a = articleRef.current
+      const c = cardRef.current
+      if (!a || !c) return stopFollow()
+      const cr = c.getBoundingClientRect() // 보이는 상자 (transform 포함)
+      if (frozen.current && cr.width >= releaseAt.current) release() // 아래에서 본문을 재며 새 폭으로 줄바꿈 — 같은 프레임
+      const ar = a.getBoundingClientRect()
+      const natural = (ar.left + ar.right) / 2 - followX.current
+      followX.current = (cr.left + cr.right) / 2 - natural
+      a.style.transform = `translateX(${followX.current}px)`
+    }
+    follower.current = tick
+    frame.postRender(tick, true)
+  }
+  const release = () => {
+    releaseAt.current = Infinity
+    const a = articleRef.current
+    if (!frozen.current || !a) return
+    frozen.current = false
+    for (const k of ['width', 'maxWidth', 'marginLeft', 'marginRight', 'paddingLeft', 'paddingRight'] as const) a.style[k] = ''
+    remember()
+  }
+  // 칸 애니메이션 끝 — 따라가기를 멈추고, 아직 묶여 있으면 (도중에 들어갈 자리가 안 났으면) 여기서 푼다
+  const unfreeze = () => {
+    clearTimeout(unfreezeT.current)
+    stopFollow()
+    release()
+  }
+  useLayoutEffect(() => {
+    const a = articleRef.current
+    const c = cardRef.current
+    if (!a || !c || frozen.current) return
+    const prev = box.current
+    // offsetWidth는 transform(layout 애니메이션)과 상관없는 진짜 폭 — 스크롤바가 생겨 안쪽만 좁아진 건 무시
+    if (prev && Math.abs(prev.card - c.offsetWidth) > 1) {
+      // 움직임 줄이기(OS 설정)면 칸도 바로 바뀐다 — 묶지도 따라가지도 않음
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches) return remember()
+      startFollow()
+      clearTimeout(unfreezeT.current)
+      unfreezeT.current = window.setTimeout(unfreeze, 1200) // 칸 애니메이션이 안 일어난 경우(창 크기 등) 대비
+      // a.offsetWidth = 묶지 않았을 때의 새 폭 (커밋 직후, 그리기 전). 좁아지면 묶지 않는다
+      if (a.offsetWidth <= prev.w + 1) return remember() // 좁아짐: 묶지 않음 (따라가기만)
+      // 새 폭 본문은 칸 가운데에 놓이니 한쪽으로 (본문 − 칸)/2 삐져나온다 — 그게 여백 − EDGE 안이면 글자는 칸 안
+      const cs = getComputedStyle(a)
+      const slack = 2 * Math.max(0, Math.min(parseFloat(cs.paddingLeft), parseFloat(cs.paddingRight)) - EDGE)
+      releaseAt.current = Math.max(prev.card + 0.7 * (c.offsetWidth - prev.card), a.offsetWidth - slack)
+      frozen.current = true
+      Object.assign(a.style, {
+        width: `${prev.w}px`,
+        maxWidth: 'none',
+        marginLeft: 'auto',
+        marginRight: 'auto',
+        paddingLeft: prev.pl,
+        paddingRight: prev.pr,
+      })
+      return
+    }
+    remember()
+  })
+  useEffect(
+    () => () => {
+      clearTimeout(unfreezeT.current)
+      if (follower.current) cancelFrame(follower.current)
+    },
+    [],
+  )
+  // 카드 ref는 둘에게 — 내 측정용 + AnimatePresence(popLayout)가 넘긴 것
+  const setCard = useCallback(
+    (el: HTMLElement | null) => {
+      cardRef.current = el
+      if (typeof ref === 'function') ref(el)
+      else if (ref) ref.current = el
+    },
+    [ref],
+  )
 
   const meta = ix.docsById.get(p.docId)
   const n = view.tabs.length
@@ -226,6 +350,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
     const ol = outLinks(ix, doc.id)
     page = (
       <article
+        ref={articleRef}
         className={cn(styles.page, '[&_figure_img]:cursor-zoom-in')}
         onClick={(e) => {
           // 본문 그림 누르면 크게 (북마크 카드 그림은 링크라 제외)
@@ -286,7 +411,8 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
 
   return (
     <m.section
-      ref={ref}
+      ref={setCard}
+      onLayoutAnimationComplete={unfreeze}
       custom={p.dir}
       variants={paneVariants}
       initial="enter"
