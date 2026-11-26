@@ -1,17 +1,20 @@
-import { BlockRenderer } from '@dumpster/blocks'
-import type { Doc } from '@dumpster/schema'
-import { useEffect, useState, useSyncExternalStore, type ReactNode } from 'react'
+import { AnimatePresence, LayoutGroup, LazyMotion, MotionConfig, domMax, m } from 'framer-motion'
+import { useCallback, useEffect, useState, type MouseEvent, type PointerEvent } from 'react'
 import { loadStore, type Store } from './data'
-import { hashOf, parseHash, type Route } from './route'
+import { Home } from './Home'
+import { Pane, type Zoom } from './Pane'
+import { parseHash } from './route'
+import { Sidebar, type RevealRequest } from './Sidebar'
+import { FlowSpine, Stack } from './Strips'
+import { TooltipLayer } from './TooltipLayer'
+import { SPRING_SOFT } from './motion'
+import { cn } from './ui'
+import { useSidebar } from './useSidebar'
+import { useView } from './useView'
+import { activeOf } from './view'
 
-// P4.0 뼈대 — 데이터 길(graph.json → Store → getDoc)과 주소만. 칸·사이드바·트리는 P4.1(리듀서)·P4.2(UI)
-
-const subscribeHash = (cb: () => void) => {
-  addEventListener('hashchange', cb)
-  return () => removeEventListener('hashchange', cb)
-}
-const useHash = () => useSyncExternalStore(subscribeHash, () => location.hash)
-const hrefOf = (id: string) => hashOf({ main: id, rel: null })
+// 탐색기 화면 = 사이드바 + 흐름 칸 + [왼쪽 띠] 연관 칸 [오른쪽 띠] (design.md §3 "칸")
+// 겉모양·움직임은 mongolive를 잇는다: 그라데이션 바탕 위 카드(m-3), 사이드바 카드 | 틈 8px | 칸 영역 카드 안에 칸 카드들(p-3 gap-3)
 
 export function App() {
   const [store, setStore] = useState<Store | null>(null)
@@ -19,140 +22,161 @@ export function App() {
   useEffect(() => {
     loadStore().then(setStore, (e: unknown) => setError(e instanceof Error ? e.message : String(e)))
   }, [])
-  const route = parseHash(useHash())
-
-  let body: ReactNode
-  if (error) body = <p className="mt-16 text-[15px] text-rose-700">{error}</p>
-  else if (!store) body = <p className="mt-16 text-[15px] text-slate-400">불러오는 중…</p>
-  else if (route.main) body = <DocPage key={route.main} store={store} route={route} />
-  else body = <Home store={store} />
-
   return (
-    <div className="min-h-screen bg-page font-sans text-slate-900 antialiased">
-      <header className="flex h-12 items-center gap-3 border-b border-slate-200 px-4">
-        <a href="#/" className="rounded-md px-1.5 py-1 text-[15px] font-bold tracking-tight hover:bg-slate-100">
-          Dumpster
-        </a>
-        <span className="text-[12px] text-slate-400">뼈대 P4.0</span>
-      </header>
-      <main className="mx-auto max-w-[760px] px-5 pb-24 sm:px-11">{body}</main>
-    </div>
+    <LazyMotion features={domMax} strict>
+      {/* 움직임 줄이기(OS 설정)면 위치·크기 애니메이션을 끈다 */}
+      <MotionConfig reducedMotion="user">
+        {store ? (
+          <Explorer store={store} />
+        ) : (
+          <div className="flex h-full items-center justify-center font-sans">
+            <p className={cn('text-[14px]', error ? 'text-rose-700' : 'text-slate-400')}>{error ?? '불러오는 중…'}</p>
+          </div>
+        )}
+        <TooltipLayer />
+      </MotionConfig>
+    </LazyMotion>
   )
 }
 
-function Home({ store }: { store: Store }) {
-  const { graph, collectionsById, docsByCollection } = store.index
-  const recent = [...graph.docs]
-    .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title, 'ko'))
-    .slice(0, 10)
-  return (
-    <>
-      <h1 className="mt-10 text-[28px] font-bold tracking-tight">Dumpster</h1>
-      <p className="mt-2 text-[15px] text-slate-500">짬통에 던져 둔 글을 컬렉션별로 이어 읽는 곳.</p>
-
-      <h2 className="mb-3 mt-10 text-[13px] font-semibold text-slate-500">컬렉션</h2>
-      <div className="grid gap-3 sm:grid-cols-2">
-        {graph.collections.map((c) => {
-          const first = c.manifestId ?? store.index.tree(c.id).rows[0]?.docId
-          const card = (
-            <>
-              {c.path.length > 1 && <span className="text-[11.5px] text-slate-400">{c.path.slice(0, -1).join(' / ')}</span>}
-              <span className="text-[16px] font-bold">{c.title}</span>
-              {c.description && <span className="line-clamp-3 text-[13px] leading-relaxed text-slate-500">{c.description}</span>}
-              <span className="mt-1.5 text-[12px] text-slate-400">{docsByCollection.get(c.id)?.length ?? 0}편</span>
-            </>
-          )
-          const cls = 'flex flex-col gap-1 rounded-xl border border-slate-200 px-4 py-3.5'
-          return first ? (
-            <a key={c.id} href={hrefOf(first)} className={`${cls} hover:border-emerald-300 hover:bg-slate-50`}>
-              {card}
-            </a>
-          ) : (
-            <div key={c.id} className={cls}>
-              {card}
-            </div>
-          )
-        })}
-      </div>
-
-      <h2 className="mb-2 mt-10 text-[13px] font-semibold text-slate-500">최근 글</h2>
-      <ul>
-        {recent.map((d) => (
-          <li key={d.id}>
-            <a href={hrefOf(d.id)} className="-mx-2.5 flex items-baseline gap-3 rounded-lg px-2.5 py-2 hover:bg-slate-50">
-              <span className="min-w-0 flex-1 truncate text-[15px] font-medium">{d.title}</span>
-              <span className="whitespace-nowrap text-[12.5px] tabular-nums text-slate-400">
-                {collectionsById.get(d.collectionId)?.title} · {d.updatedAt.slice(5, 10)}
-              </span>
-            </a>
-          </li>
-        ))}
-      </ul>
-    </>
-  )
-}
-
-function DocPage({ store, route }: { store: Store; route: Route }) {
-  const { main, rel } = route
-  const [loaded, setLoaded] = useState<{ doc: Doc | null } | null>(null)
+// 창 폭 구간 — 폭이 바뀔 때마다가 아니라 구간이 바뀔 때만 다시 그린다
+function useMedia(query: string): boolean {
+  const [on, setOn] = useState(() => matchMedia(query).matches)
   useEffect(() => {
-    let alive = true
-    store.getDoc(main!).then((doc) => {
-      if (!alive) return
-      // 옛 임시 ID로 들어왔으면 주소만 지금 ID로 고친다 (기록은 안 쌓음)
-      if (doc && doc.id !== main) history.replaceState(history.state, '', hashOf({ main: doc.id, rel }))
-      setLoaded({ doc })
-    })
-    return () => {
-      alive = false
-    }
-  }, [store, main, rel])
+    const q = matchMedia(query)
+    const h = () => setOn(q.matches)
+    q.addEventListener('change', h)
+    return () => q.removeEventListener('change', h)
+  }, [query])
+  return on
+}
 
-  if (!loaded) return null
-  const { doc } = loaded
-  if (!doc) {
-    return (
-      <div className="mt-16">
-        <h1 className="text-[22px] font-bold">없는 글</h1>
-        <p className="mt-2 text-[15px] text-slate-500">지워졌거나 공개를 내린 글이에요.</p>
-        <a href="#/" className="mt-4 inline-block text-[14px] text-emerald-700 hover:underline">
-          첫 화면으로
-        </a>
-      </div>
-    )
+let revealN = 0
+
+function Explorer({ store }: { store: Store }) {
+  const ix = store.index
+  const { view, slot, flash, pending, dir, dispatch, focusSlot } = useView(store)
+  const phone = useMedia('(max-width: 720px)')
+  const narrow = useMedia('(max-width: 1023px)') // mongolive와 같은 기준 — 사이드바 전체가 칸 위에 뜬다
+  const twoPaneNarrow = useMedia('(max-width: 1099px)') // 칸이 둘이면 이보다 좁을 때도 뜬다 (design.md §3)
+  const hasRel = view.tabs.length > 0
+  const sidebar = useSidebar(narrow || (hasRel && !view.collapsed && twoPaneNarrow))
+  const [hover, setHover] = useState<string | null>(null) // 본문 링크·띠·글 끝 목록에 마우스 → 트리에서 그 글 자리
+  const [reveal, setReveal] = useState<RevealRequest | null>(null)
+  const [rowFlash, setRowFlash] = useState<string | null>(null)
+  const [zoom, setZoom] = useState<Zoom | null>(null)
+
+  const focusDoc = slot === 'rel' && hasRel ? activeOf(view) : view.main
+  const coll = phone ? null : view.collapsed
+  const active = activeOf(view)
+  // 띠에 들어갈 탭이 있는 쪽만 (왼쪽 = 펼친 탭 앞쪽 + 연관 칸을 접었으면 펼친 탭, 오른쪽 = 뒤쪽)
+  const leftTabs = hasRel && !phone ? view.active + (coll === 'rel' ? 1 : 0) : 0
+  const rightTabs = hasRel && !phone ? view.tabs.length - view.active - 1 : 0
+
+  // 트리에서 그 글 보이기 — 사이드바가 접혀 있으면 펼치고, 행을 잠깐 파란 테두리로
+  const revealDoc = useCallback((id: string) => {
+    setReveal({ id, n: ++revealN })
+    setRowFlash(id)
+  }, [])
+  useEffect(() => {
+    if (!rowFlash) return
+    const t = setTimeout(() => setRowFlash(null), 1200)
+    return () => clearTimeout(t)
+  }, [rowFlash])
+
+  useEffect(() => {
+    if (!zoom) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoom(null)
+    }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [zoom])
+
+  // 칸을 누르면 그 칸이 지금 보는 칸 → 사이드바가 그 글의 컬렉션으로 (기록엔 안 쌓임)
+  const onPanesDown = (e: PointerEvent) => {
+    const pane = (e.target as HTMLElement).closest<HTMLElement>('[data-slot]')
+    const s = pane?.dataset.slot
+    if ((s === 'main' || s === 'rel') && pane!.dataset.spine === undefined) focusSlot(s)
+  }
+  const onPanesOver = (e: MouseEvent) => {
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-hl], a[href^="#/d/"]')
+    const id = el ? (el.dataset.hl ?? parseHash(el.getAttribute('href') ?? '').main) : null
+    setHover((h) => (h === id ? h : id))
   }
 
-  const { collectionsById, docsById, prevOf, nextOf } = store.index
-  const prevId = prevOf.get(doc.id)
-  const prev = prevId ? docsById.get(prevId) : undefined
-  const nexts = nextOf.get(doc.id) ?? []
+  const paneProps = { store, view, phone, flash, pending, dispatch, onReveal: revealDoc, onZoom: setZoom }
+
   return (
-    <article>
-      <p className="mt-8 text-[12.5px] text-slate-500">{collectionsById.get(doc.collectionId)?.path.join(' › ')}</p>
-      <h1 className="mt-2 text-[28px] font-bold leading-snug tracking-tight [text-wrap:balance]">{doc.title}</h1>
-      <div className="mb-7 mt-2.5 flex flex-wrap gap-x-3 gap-y-1 text-[13px] tabular-nums text-slate-500">
-        <span>{doc.createdAt.slice(0, 10)}</span>
-        {doc.tags.map((t) => (
-          <span key={t} className="text-emerald-700">
-            #{t}
-          </span>
-        ))}
+    <div className="flex h-full flex-col font-sans text-slate-900 antialiased">
+      <div className="relative m-3 flex min-h-0 flex-1">
+        <Sidebar
+          sidebar={sidebar}
+          ix={ix}
+          view={view}
+          focusDoc={focusDoc}
+          hl={[hover, rowFlash]}
+          reveal={reveal}
+          onOpen={(id) => dispatch({ type: 'open', id })}
+          onHome={() => dispatch({ type: 'home' })}
+        />
+        <main
+          className="relative min-w-0 flex-1 overflow-hidden rounded-2xl border border-slate-200/60 bg-white/80 shadow-panel"
+          onPointerDown={onPanesDown}
+          onMouseOver={onPanesOver}
+          onMouseLeave={() => setHover(null)}
+        >
+          <LayoutGroup>
+            <div className="flex h-full w-full gap-3 overflow-hidden p-3" data-panes={hasRel ? 'two' : 'one'}>
+              <AnimatePresence initial={false} mode="popLayout">
+                {!view.main ? (
+                  <Home key="home" ix={ix} onOpen={(id) => dispatch({ type: 'open', id })} />
+                ) : (
+                  [
+                    coll === 'main' && hasRel ? (
+                      <FlowSpine key="spine" title={ix.docsById.get(view.main)?.title ?? '없는 글'} dispatch={dispatch} />
+                    ) : phone && hasRel ? null : (
+                      <Pane key={`main:${view.main}`} slot="main" docId={view.main} dir={dir.main} focused={slot === 'main'} {...paneProps} />
+                    ),
+                    leftTabs > 0 && <Stack key="stack-left" ix={ix} view={view} side="left" phone={phone} dispatch={dispatch} />,
+                    hasRel && active && coll !== 'rel' && (
+                      <Pane key={`rel:${active}`} slot="rel" docId={active} dir={dir.rel} focused={slot === 'rel'} {...paneProps} />
+                    ),
+                    rightTabs > 0 && <Stack key="stack-right" ix={ix} view={view} side="right" phone={phone} dispatch={dispatch} />,
+                  ]
+                )}
+              </AnimatePresence>
+            </div>
+          </LayoutGroup>
+        </main>
       </div>
-      <BlockRenderer blocks={doc.blocks} />
-      {(prev || nexts.length > 0) && (
-        <nav aria-label="이전·다음 글" className="mt-12 flex flex-col gap-1 border-t border-slate-200 pt-6 text-[14px]">
-          {prev && (
-            <a href={hrefOf(prev.id)} className="text-slate-600 hover:text-emerald-700">
-              ← 이전 · {prev.title}
-            </a>
-          )}
-          {nexts.map((n) => (
-            <a key={n.id} href={hrefOf(n.id)} className="text-slate-600 hover:text-emerald-700">
-              다음 · {n.title} →
-            </a>
-          ))}
-        </nav>
-      )}
-    </article>
+
+      {/* 그림 크게 — 화면에 맞춰 키움 (작은 그림도 본문보다 크게). 누르기·Esc로 닫음 */}
+      <AnimatePresence>
+        {zoom && (
+          <m.div
+            className="fixed inset-0 z-[200] flex cursor-zoom-out flex-col items-center justify-center gap-2.5 bg-black/80 p-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setZoom(null)}
+            role="dialog"
+            aria-label="그림 크게 보기"
+            data-zoom
+          >
+            <m.img
+              src={zoom.src}
+              alt={zoom.alt}
+              className="min-h-0 w-full flex-1 basis-0 object-contain"
+              initial={{ scale: 0.96 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.96 }}
+              transition={SPRING_SOFT}
+            />
+            {zoom.alt && !zoom.alt.startsWith('Pasted image') && <p className="text-center text-[13px] text-neutral-200">{zoom.alt}</p>}
+          </m.div>
+        )}
+      </AnimatePresence>
+    </div>
   )
 }

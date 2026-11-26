@@ -4,6 +4,30 @@
 @tailwind components;
 @tailwind utilities;
 
+/* 탐색기 테마 값 — 그림자·바탕은 mongolive(apps/web/src/index.css) 그대로. 색 단계는 블록 프리셋 */
+:root {
+  --shadow-soft: 0 1px 10px rgba(15, 23, 42, 0.04);
+  --shadow-panel: 0 1px 18px rgba(188, 194, 195, 0.16);
+  --shadow-elevated: 0 14px 30px rgba(15, 23, 42, 0.1);
+  --bg-grid-fade: radial-gradient(circle at center, rgba(34, 197, 94, 0.12), transparent 42%), linear-gradient(180deg, #f0f4f8, rgba(243, 247, 251, 1));
+}
+.dark {
+  /* 어두운 바탕에선 검은 그림자가 안 보이므로 흰 빛을 은은하게 번지게 */
+  --shadow-soft: 0 0 10px rgba(255, 255, 255, 0.03);
+  --shadow-panel: 0 0 18px rgba(255, 255, 255, 0.04);
+  --shadow-elevated: 0 6px 32px rgba(255, 255, 255, 0.07);
+  --bg-grid-fade: radial-gradient(circle at center, rgba(151, 181, 151, 0.04), transparent 42%), linear-gradient(180deg, #1b1b1b, #1e1e1e);
+}
+html,
+body,
+#root {
+  height: 100%;
+}
 body {
-  background: var(--page-bg);
+  background: var(--bg-grid-fade);
+  overflow: hidden;
+}
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar) transparent;
 }

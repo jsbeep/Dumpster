@@ -13,11 +13,13 @@
   "dependencies": {
     "@dumpster/blocks": "workspace:*",
     "@dumpster/schema": "workspace:*",
+    "framer-motion": "12.43.0",
     "lucide-react": "^0.469.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1"
   },
   "devDependencies": {
+    "@tailwindcss/container-queries": "^0.1.1",
     "@types/node": "^22.20.5",
     "@types/react": "^18.3.21",
     "@types/react-dom": "^18.3.6",
