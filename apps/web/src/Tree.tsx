@@ -48,7 +48,7 @@ const dot = {
   man: 'border-slate-500 bg-slate-500', // 흐름 글(꽉 찬 진한 점)과 헷갈리지 않게 한 단계 옅게
   sel: 'border-accent-600 bg-accent-600', // 흐름 글 · 펼친 탭
   // 탭에 있는 글 = 고리 (행 바탕색 틈 1.5px + 고리 1.5px)
-  open: 'shadow-[0_0_0_1.5px_var(--dot-bg),0_0_0_3px_rgb(var(--c-accent-600))]',
+  open: 'shadow-[0_0_0_1.5px_var(--dot-bg),0_0_0_3px_rgb(var(--c-slate-400))]', // 고리는 회색 (11-27)
 }
 export const dotClass = (shape: DotShape, state: DotState) =>
   cn(dot.base, shape === 'man' ? dot.square : dot.round, state === 'sel' || state === 'act' ? dot.sel : dot[shape], (state === 'act' || state === 'open') && dot.open)
