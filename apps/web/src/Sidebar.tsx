@@ -22,7 +22,7 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerE
 import { linkMarks } from './links'
 import { searchDocs } from './search'
 import { SITE } from './site'
-import { collapseY, SPRING_SIDEBAR } from './motion'
+import { collapseY, QUICK } from './motion'
 import { isDark, onSystemTheme, toggleTheme } from './theme'
 import { Tree } from './Tree'
 import { cn, DocLink, md } from './ui'
@@ -37,54 +37,57 @@ import type { View } from './view'
 //   로고 버튼: 평소엔 '헌', 올리면 무엇이 될지(전체 → 접기 아이콘, 레일 → 펼치기 아이콘)
 //   너비: 오른쪽 틈을 끌면 너비에 따라 단계가 바뀐다. 더블클릭 = 기본 너비
 //   떠 있는 화면(좁은 창·두 칸)에선 레일까지만 붙고, 전체는 칸 위에 떠서 열린다(바깥 누르기·Esc·글 고르기 → 레일)
+//   폰(≤720px, 11-27): 단계 없음. 칸 머리 ☰ → App이 사이드바+칸을 통째로 밀어 꺼낸다(서랍) — 여기선 전체 내용만 그린다
+// 11-27 평평한 판: 카드·그림자 없이 사이드바 바탕색만. 칸 쪽 경계선은 첫 칸의 왼쪽 선이 맡는다
 // 기록 밖 화면 상태(목록 탭·펼친 컬렉션·접은 갈래)는 여기서만 갖는다.
 // 지금 보는 칸의 글(focusDoc)이 바뀌면 그 글의 컬렉션을 펼치고, 컬렉션이 바뀌었으면 다른 건 접는다
 
-const GAP = 8 // 사이드바와 칸 사이 틈 — 끌기 손잡이가 여기 놓인다
+const HANDLE = 8 // 끌기 손잡이 너비 — 사이드바와 칸의 경계선 위에 반씩 걸친다
 
 const styles = {
-  card: 'relative flex h-full flex-col overflow-hidden rounded-2xl border border-slate-200/60 bg-white/90 shadow-panel',
-  cardFloating: 'relative flex h-full flex-col overflow-hidden rounded-2xl bg-white shadow-elevated ring-1 ring-slate-200/70',
-  brand: 'mx-3 mt-3 flex h-12 shrink-0 items-center gap-2.5',
-  brandRail: 'mt-3 flex h-12 shrink-0 items-center justify-center',
-  logo: 'group relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-emerald-200 bg-emerald-50 text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30',
+  card: 'relative flex h-full flex-col overflow-hidden bg-side',
+  cardFloating: 'relative flex h-full flex-col overflow-hidden border-r border-line bg-side shadow-pop',
+  brand: 'mx-3 mt-2 flex h-12 shrink-0 items-center gap-2.5',
+  brandRail: 'mt-2 flex h-12 shrink-0 items-center justify-center',
+  // 로고 = 글자색·바탕색을 뒤집은 네모 (라이트 = 검정 바탕, 다크 = 흰 바탕)
+  logo: 'group relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md bg-slate-900 text-[13px] font-bold text-white transition-colors hover:bg-slate-700 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent-400',
   // 제목 = 첫 화면 버튼
   brandName: 'group/title min-w-0 flex-1 rounded-md text-left outline-none',
-  brandTitle: 'truncate text-sm font-semibold tracking-tight text-slate-900 transition-colors group-hover/title:text-emerald-700',
+  brandTitle: 'truncate text-sm font-semibold tracking-tight text-slate-900 transition-colors group-hover/title:text-slate-500',
   brandSub: 'truncate text-[11px] text-slate-500',
-  headBtn: 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800',
-  search: 'h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-[13px] text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-500/20',
+  headBtn: 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-side-hover hover:text-slate-900',
+  search: 'h-8 w-full rounded-md border border-line bg-page pl-8 pr-8 text-[13px] text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400',
   searchIcon: 'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400',
-  searchClear: 'absolute right-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700',
-  seg: 'mx-3 mt-2 flex shrink-0 gap-0.5 rounded-lg bg-slate-100 p-[3px]',
-  segBtn: 'flex h-7 flex-1 items-center justify-center rounded-md text-[12.5px] font-medium transition-colors',
-  segIdle: 'text-slate-500 hover:text-slate-700',
-  segOn: 'bg-white text-slate-900 shadow-sm',
-  divider: 'mx-3 my-2.5 h-px shrink-0 bg-slate-100',
+  searchClear: 'absolute right-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-slate-400 transition-colors hover:bg-hover hover:text-slate-900',
+  seg: 'mx-3 mt-2 flex shrink-0 gap-0.5 rounded-md bg-side-hover p-[3px]',
+  segBtn: 'flex h-7 flex-1 items-center justify-center rounded-[5px] text-[12.5px] font-medium transition-colors',
+  segIdle: 'text-slate-500 hover:text-slate-900',
+  segOn: 'bg-page text-slate-900 shadow-sm',
+  divider: 'mx-3 my-2.5 h-px shrink-0 bg-line',
   body: 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3',
   railList: 'flex flex-col items-center gap-1',
-  railBtn: 'inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800',
-  railBtnActive: 'inline-flex h-9 w-9 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 transition-colors',
-  iconBtn: 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-700',
+  railBtn: 'inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-side-hover hover:text-slate-900',
+  railBtnActive: 'inline-flex h-9 w-9 items-center justify-center rounded-md bg-selected text-slate-900 transition-colors',
+  iconBtn: 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-selected hover:text-slate-900',
   // 줄에 마우스를 올려야 보이는 버튼 — display를 iconBtn과 따로 (inline-flex와 hidden이 겹치면 순서로 갈림)
-  rowAction: 'hidden h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-700 group-hover:inline-flex group-focus-within:inline-flex',
+  rowAction: 'hidden h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-selected hover:text-slate-900 group-hover:inline-flex group-focus-within:inline-flex',
   // 컬렉션 줄 (mongolive ConnectionsTree 행)
-  collRow: 'group flex h-8 w-full shrink-0 items-center gap-1.5 rounded-md pr-1 text-left text-[13px] transition-colors hover:bg-slate-100',
+  collRow: 'group flex h-8 w-full shrink-0 items-center gap-1.5 rounded-md pr-1 text-left text-[13px] transition-colors hover:bg-side-hover',
   collLabel: 'min-w-0 flex-1 truncate font-semibold',
   count: 'shrink-0 pr-1 font-mono text-[11px] tabular-nums text-slate-400',
   item: 'flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 transition-colors',
-  itemIdle: 'hover:bg-slate-100',
+  itemIdle: 'hover:bg-side-hover',
   itemOn: 'bg-selected',
   itemTitle: 'truncate text-[13px] font-medium text-slate-700',
   mark: 'rounded-sm bg-amber-100 text-inherit',
   itemMeta: 'flex gap-1.5 text-[11px] tabular-nums text-slate-400',
   sectionHead: 'mx-2 mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400',
-  tag: 'rounded-full border px-2 py-0.5 text-[12px] transition-colors',
-  tagIdle: 'border-slate-200 text-slate-600 hover:bg-slate-100',
-  tagOn: 'border-transparent bg-emerald-50 text-emerald-700',
-  handle: 'group absolute inset-y-0 z-10 flex cursor-col-resize touch-none justify-center outline-none',
-  handleLineIdle: 'w-[2px] rounded-full bg-transparent transition-colors group-hover:bg-emerald-300 group-focus-visible:bg-emerald-400',
-  handleLineActive: 'w-[2px] rounded-full bg-emerald-400',
+  tag: 'rounded border px-2 py-0.5 text-[12px] transition-colors',
+  tagIdle: 'border-line text-slate-600 hover:bg-side-hover',
+  tagOn: 'border-transparent bg-selected font-medium text-slate-900',
+  handle: 'group absolute inset-y-0 z-[60] flex cursor-col-resize touch-none justify-center outline-none',
+  handleLineIdle: 'w-[2px] bg-transparent transition-colors group-hover:bg-slate-400 group-focus-visible:bg-slate-500',
+  handleLineActive: 'w-[2px] bg-slate-500',
 } as const
 
 type SideTab = 'collections' | 'recent' | 'tags'
@@ -101,6 +104,9 @@ export interface RevealRequest {
 
 interface Props {
   sidebar: SidebarState
+  phone: boolean // 폰 서랍 — 전체 내용만, 폭 drawerWidth
+  drawerWidth: number
+  onDrawerClose: () => void
   ix: GraphIndex
   view: View
   focusDoc: string | null
@@ -291,7 +297,7 @@ function FullContent(
   return (
     <>
       <div className={styles.brand}>
-        <Logo hoverIcon={PanelLeftClose} label="아이콘만 보기" onClick={p.onCollapse} />
+        <Logo hoverIcon={PanelLeftClose} label={p.phone ? '목록 닫기' : '아이콘만 보기'} onClick={p.phone ? p.onDrawerClose : p.onCollapse} />
         <button type="button" className={styles.brandName} onClick={p.onHome} data-tt="첫 화면" data-home>
           <p className={styles.brandTitle}>{SITE.title}</p>
           <p className={styles.brandSub}>{SITE.author}</p>
@@ -375,7 +381,7 @@ function RailContent({ tab, onExpand, onHide, onSearch, onTab }: { tab: SideTab;
       <div className="flex-1" />
       <div className={cn(styles.railList, 'pb-3')}>
         <ThemeToggle className={styles.railBtn} />
-        <div className="my-1 h-px w-6 bg-slate-100" />
+        <div className="my-1 h-px w-6 bg-line" />
         <button type="button" className={styles.railBtn} onClick={onHide} aria-label="사이드바 숨기기" data-tt="사이드바 숨기기 — 왼쪽 끝에서 다시 꺼낸다">
           <ChevronsLeft size={16} />
         </button>
@@ -518,10 +524,10 @@ function PullHandle({ drag, onRestore }: { drag: ReturnType<typeof useDrag>; onR
       }}
     >
       <m.span
-        className="flex items-center justify-center overflow-hidden rounded-r-xl bg-white text-slate-500 shadow-elevated ring-1 ring-slate-200"
+        className="flex items-center justify-center overflow-hidden rounded-r-md border border-l-0 border-line bg-side text-slate-500 shadow-pop"
         initial={false}
         animate={big ? { width: 20, height: 72, opacity: 1 } : { width: 5, height: 48, opacity: 0.85 }}
-        transition={SPRING_SIDEBAR}
+        transition={QUICK}
       >
         {big && <ChevronRight size={14} aria-hidden />}
       </m.span>
@@ -594,7 +600,7 @@ export function Sidebar(p: Props) {
     setOpen((s) => (s.has(cid) ? s : new Set(s).add(cid)))
     setOnly((o) => (o && o !== cid ? cid : o))
     scrollTo.current = p.reveal.id
-    if (mode !== 'full') setMode('full')
+    if (!p.phone && mode !== 'full') setMode('full')
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ix, p.reveal])
 
@@ -637,7 +643,7 @@ export function Sidebar(p: Props) {
   if (dockedMode !== 'collapsed') lastVisibleRef.current = dockedMode
   const contentMode = lastVisibleRef.current
   const [mounted, setMounted] = useState(dockedMode !== 'collapsed')
-  // 열고 닫히는 동안만 잘라낸다 — 늘 자르면 카드 그림자가 잘리고, 안 자르면 펼치는 동안 카드가 칸 위로 삐져나온다
+  // 열고 닫히는 동안만 잘라낸다 — 늘 자르면 경계선에 걸친 끌기 손잡이 반쪽이 잘리고, 안 자르면 펼치는 동안 내용이 칸 위로 삐져나온다
   const [animating, setAnimating] = useState(false)
   const firstRunRef = useRef(true)
   useEffect(() => {
@@ -666,14 +672,23 @@ export function Sidebar(p: Props) {
     <FullContent {...p} list={list} bodyRef={bodyRef} focusSearch={focusSearch} onSearchFocused={() => setFocusSearch(0)} onCollapse={() => setMode('rail')} onPick={pick} onHome={home} />
   )
 
+  // 폰: 서랍 — 사이드바+칸 묶음을 App이 옆으로 민다. 여기선 제 폭으로 전체 내용만
+  if (p.phone) {
+    return (
+      <aside className="h-full shrink-0 border-r border-line" style={{ width: p.drawerWidth }} aria-label="사이드바" data-sidebar="drawer">
+        <div className={styles.card}>{full}</div>
+      </aside>
+    )
+  }
+
   return (
     <>
-      {/* 바깥은 너비만 움직이고(0 ↔ 너비+틈), 안쪽 카드는 고정 너비 — 바뀌는 동안 내용이 찌그러지지 않는다 */}
+      {/* 바깥은 너비만 움직이고(0 ↔ 너비), 안쪽은 고정 너비 — 바뀌는 동안 내용이 찌그러지지 않는다 */}
       <m.div
         className="relative h-full shrink-0"
         initial={false}
-        animate={{ width: dockedMode === 'collapsed' ? 0 : dockedWidth + GAP }}
-        transition={dragging ? { duration: 0 } : SPRING_SIDEBAR}
+        animate={{ width: dockedMode === 'collapsed' ? 0 : dockedWidth }}
+        transition={dragging ? { duration: 0 } : QUICK}
         onAnimationComplete={() => {
           setAnimating(false)
           if (dockedMode === 'collapsed' && !dragging) setMounted(false)
@@ -709,7 +724,7 @@ export function Sidebar(p: Props) {
                 aria-valuenow={dockedWidth}
                 tabIndex={0}
                 className={styles.handle}
-                style={{ right: -GAP, width: GAP }}
+                style={{ right: -HANDLE / 2, width: HANDLE }}
                 data-tt={dragging ? undefined : '끌어서 너비 바꾸기 · 더블클릭 = 기본 너비'}
                 onPointerDown={edgeDrag.start(dockedWidth)}
                 {...edgeDrag.handlers}
@@ -738,20 +753,21 @@ export function Sidebar(p: Props) {
           <>
             <m.div
               key="backdrop"
-              className="absolute inset-0 z-[100] rounded-2xl bg-black/5"
+              className="absolute inset-0 z-[100] bg-black/10"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={QUICK}
               onClick={() => setMode('rail')}
             />
             <m.aside
               key="panel"
               className="absolute inset-y-0 left-0 z-[100] max-w-[calc(100%-2rem)]"
               style={{ width }}
-              initial={{ opacity: 0, x: -24 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -24 }}
-              transition={SPRING_SIDEBAR}
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={QUICK}
               aria-label="사이드바"
               data-sidebar="floating"
             >

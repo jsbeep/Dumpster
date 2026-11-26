@@ -15,8 +15,8 @@
   --code-fg: #37352f;
   --code-muted: #9b9a97;
   --code-border: #e9e9e7;
-  --scrollbar: #d1d5db;
-  --scrollbar-hover: #9ca3af;
+  --scrollbar: #d4d4d4;
+  --scrollbar-hover: #a3a3a3;
 }
 
 /* 다크 = Obsidian 기본 다크: 페이지 #1e1e1e, 카드 #262626. .dark를 html이 아닌 요소에 달아도 그 안만 다크가 된다 */

@@ -1,6 +1,6 @@
 /** @type {import('tailwindcss').Config} */
 // 색·글꼴은 블록 패키지 프리셋 하나에서 — 플레이그라운드와 같다.
-// 탐색기 화면은 mongolive UI를 잇는다: 카드(rounded-2xl + shadow-panel)·그림자·바탕 그라데이션 값은 src/index.css 변수
+// 탐색기 화면 값(사이드바 바탕·선·호버·떠 있는 그림자)은 src/index.css 변수
 module.exports = {
   presets: [require('@dumpster/blocks/tailwind.preset')],
   content: [
@@ -11,13 +11,14 @@ module.exports = {
   ],
   theme: {
     extend: {
-      boxShadow: {
-        soft: 'var(--shadow-soft)',
-        panel: 'var(--shadow-panel)',
-        elevated: 'var(--shadow-elevated)',
+      colors: {
+        side: 'var(--side)',
+        'side-hover': 'var(--side-hover)',
+        hover: 'var(--hover)',
+        line: 'var(--line)',
       },
-      backgroundImage: {
-        'grid-fade': 'var(--bg-grid-fade)',
+      boxShadow: {
+        pop: 'var(--shadow-pop)',
       },
     },
   },

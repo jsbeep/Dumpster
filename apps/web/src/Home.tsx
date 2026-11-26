@@ -1,16 +1,38 @@
 import type { GraphIndex } from '@dumpster/schema'
 import { m } from 'framer-motion'
+import { Menu } from 'lucide-react'
 import { forwardRef } from 'react'
-import { paneVariants, SPRING_COLUMN } from './motion'
+import { paneVariants, QUICK } from './motion'
 import { styles as pane } from './Pane'
 import { SITE } from './site'
-import { DocLink, md } from './ui'
+import { cn, DocLink, md } from './ui'
 
-// 첫 화면 — 컬렉션 카드 + 최근 글 (design.md 11-24). 칸 카드 하나에 담는다
-export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; onOpen: (id: string) => void }>(function Home({ ix, z, onOpen }, ref) {
+// 첫 화면 — 컬렉션 카드 + 최근 글 (design.md 11-24). 칸 하나에 담는다. 폰은 머리에 ☰ (목록 열기)
+export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: boolean; onMenu?: () => void; onOpen: (id: string) => void }>(function Home(
+  { ix, z, phone, onMenu, onOpen },
+  ref,
+) {
   const recent = [...ix.graph.docs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title, 'ko')).slice(0, 8)
   return (
-    <m.section ref={ref} custom={0} variants={paneVariants} initial="enter" animate="center" exit="exit" transition={SPRING_COLUMN} style={{ zIndex: z }} className={pane.card} data-slot="home">
+    <m.section
+      ref={ref}
+      custom={0}
+      variants={paneVariants}
+      initial="enter"
+      animate="center"
+      exit="exit"
+      transition={QUICK}
+      style={{ zIndex: z }}
+      className={cn(pane.card, pane.grow, !phone && pane.edge)}
+      data-slot="home"
+    >
+      {onMenu && (
+        <div className={cn(pane.header, 'border-transparent')}>
+          <button type="button" className={pane.iconBtn} onClick={onMenu} aria-label="목록 열기" data-tt="목록 열기" data-menu>
+            <Menu size={18} />
+          </button>
+        </div>
+      )}
       <div className={pane.scroll}>
         <article className={pane.page}>
           <h1 className="mt-8 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 @[560px]:text-[28px]">{SITE.title}</h1>
@@ -27,9 +49,9 @@ export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; onOpen:
                   <span className="mt-1.5 font-mono text-[11px] tabular-nums text-slate-400">{ix.docsByCollection.get(c.id)?.length ?? 0}편</span>
                 </>
               )
-              const cls = 'flex flex-col gap-1 rounded-2xl border border-slate-200 px-4 py-3.5 transition-colors'
+              const cls = 'flex flex-col gap-1 rounded-lg border border-line px-4 py-3.5 transition-colors'
               return first ? (
-                <DocLink key={c.id} id={first} onGo={() => onOpen(first)} className={`${cls} hover:border-emerald-300 hover:bg-slate-50`} data-home-card>
+                <DocLink key={c.id} id={first} onGo={() => onOpen(first)} className={`${cls} hover:border-slate-300 hover:bg-hover`} data-home-card>
                   {card}
                 </DocLink>
               ) : (
@@ -42,7 +64,7 @@ export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; onOpen:
           <h2 className="mb-2 mt-9 text-[11px] font-semibold uppercase tracking-wider text-slate-400">최근 글</h2>
           <div className="flex flex-col">
             {recent.map((d) => (
-              <DocLink key={d.id} id={d.id} onGo={() => onOpen(d.id)} className="-mx-2.5 flex items-baseline gap-3 rounded-lg px-2.5 py-2 transition-colors hover:bg-slate-100" data-home-recent>
+              <DocLink key={d.id} id={d.id} onGo={() => onOpen(d.id)} className="-mx-2.5 flex items-baseline gap-3 rounded-md px-2.5 py-2 transition-colors hover:bg-hover" data-home-recent>
                 <span className="min-w-0 flex-1 truncate text-[15px] font-medium text-slate-900">{d.title}</span>
                 <span className="whitespace-nowrap text-[12.5px] tabular-nums text-slate-400">
                   {ix.collectionsById.get(d.collectionId)?.title} · {md(d.updatedAt)}

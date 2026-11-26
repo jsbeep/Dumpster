@@ -1,10 +1,11 @@
 /** @type {import('tailwindcss').Config} */
 // 탐색기(apps/web)·플레이그라운드가 같이 쓰는 Tailwind 프리셋 — mongolive apps/web/tailwind.config.cjs의 팔레트를 옮겨 왔다.
-// 색 클래스(bg-slate-100, text-emerald-700 …)는 그대로 두고, 그 색들이 CSS 변수를 가리키게 해서 .dark일 때 변수 값만 바꾼다.
-//   라이트 = Tailwind 원래 값
+// 색 클래스(bg-slate-100, text-accent-700 …)는 그대로 두고, 그 색들이 CSS 변수를 가리키게 해서 .dark일 때 변수 값만 바꾼다.
+//   라이트 = Tailwind 원래 값. 단 slate는 neutral(푸른 기 없는 회색)로 — 11-27 채도 없는 화면
 //   다크   = Obsidian 기본 다크 테마 느낌. slate는 무채색 회색, white는 카드 바탕(#262626),
-//            emerald(강조색)는 올리브 초록, sky는 Frost 하늘색.
-//            강조색의 연한 단계(50~300)는 카드 위에 겹친 반투명 틴트, 진한 단계는 밝은 쪽으로.
+//            emerald는 올리브 초록, sky는 Frost 하늘색 (이제 콜아웃 같은 본문 색에만 쓴다).
+//            색 팔레트의 연한 단계(50~300)는 카드 위에 겹친 반투명 틴트, 진한 단계는 밝은 쪽으로.
+//   accent = 화면 강조색(지금 연 글·링크·체크). 11-27 초록 → 무채색: 라이트는 검정 쪽, 다크는 흰색 쪽
 // mongolive와 달리 다크 선택자가 :root.dark가 아니라 .dark — 갤러리에서 일부만 다크로 보여줄 수 있게.
 // 색 밖의 테마 값(코드 블록·페이지 바탕·글꼴)은 src/theme.css.
 const colors = require('tailwindcss/colors')
@@ -21,8 +22,18 @@ const DARK_SLATE = {
 }
 // 카드 바탕(white 자리) — 페이지 배경(#1e1e1e)보다 한 단계 밝게. Obsidian 사이드바 색
 const DARK_SURFACE = '#262626'
-// 선택된 행 — Obsidian 파일 트리의 선택 색
+// 선택된 행 — Obsidian 파일 트리의 선택 색. 라이트는 사이드바 바탕(#f7f7f7)·호버(#ececec)보다 한 단계 진한 회색
 const DARK_SELECTED = '#363636'
+const LIGHT_SELECTED = '#e3e3e3'
+// 강조색 단계 — 숫자가 클수록 강하다(라이트는 검게, 다크는 희게). 50~300 = 바탕·밑줄, 600 = 칠, 700 = 글자
+const ACCENT_LIGHT = {
+  50: '#f5f5f5', 100: '#ebebeb', 200: '#dedede', 300: '#c4c4c4', 400: '#9e9e9e', 500: '#6b6b6b',
+  600: '#2b2b2b', 700: '#1a1a1a', 800: '#111111', 900: '#0a0a0a', 950: '#000000',
+}
+const ACCENT_DARK = {
+  50: '#2f2f2f', 100: '#343434', 200: '#3e3e3e', 300: '#5a5a5a', 400: '#8c8c8c', 500: '#b3b3b3',
+  600: '#d9d9d9', 700: '#ececec', 800: '#f2f2f2', 900: '#f7f7f7', 950: '#ffffff',
+}
 const ACCENT = '#97b597'
 const ACCENT_TEXT = '#a6c4a8'
 const FROST = '#cce2dd'
@@ -62,13 +73,18 @@ const darkAccent = (p, s) => {
 const themeVars = (dark) => {
   const vars = {
     '--c-white': rgb(dark ? DARK_SURFACE : '#ffffff'),
-    '--c-selected': rgb(dark ? DARK_SELECTED : colors.emerald[50]),
+    '--c-selected': rgb(dark ? DARK_SELECTED : LIGHT_SELECTED),
   }
   for (const p of PALETTES) {
     for (const s of SHADES) {
-      vars[`--c-${p}-${s}`] = !dark ? rgb(colors[p][s]) : p === 'slate' ? rgb(DARK_SLATE[s]) : darkAccent(p, s)
+      vars[`--c-${p}-${s}`] = !dark
+        ? rgb(p === 'slate' ? colors.neutral[s] : colors[p][s])
+        : p === 'slate'
+          ? rgb(DARK_SLATE[s])
+          : darkAccent(p, s)
     }
   }
+  for (const s of SHADES) vars[`--c-accent-${s}`] = rgb((dark ? ACCENT_DARK : ACCENT_LIGHT)[s])
   return vars
 }
 
@@ -79,7 +95,7 @@ module.exports = {
       colors: {
         white: varColor('white'),
         selected: varColor('selected'),
-        ...Object.fromEntries(PALETTES.map((p) => [p, Object.fromEntries(SHADES.map((s) => [s, varColor(`${p}-${s}`)]))])),
+        ...Object.fromEntries([...PALETTES, 'accent'].map((p) => [p, Object.fromEntries(SHADES.map((s) => [s, varColor(`${p}-${s}`)]))])),
         // 페이지 바탕·코드 블록은 slate 단계와 따로 간다 — slate-950은 다크에서 밝은색이 되므로 코드 바탕으로 못 쓴다
         page: 'var(--page-bg)',
         code: {

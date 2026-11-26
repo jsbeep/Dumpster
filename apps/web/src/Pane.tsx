@@ -1,6 +1,6 @@
 import { BlockRenderer, type BlockOf } from '@dumpster/blocks'
 import type { Doc, GraphIndex } from '@dumpster/schema'
-import { AnimatePresence, cancelFrame, frame, m } from 'framer-motion'
+import { AnimatePresence, m } from 'framer-motion'
 import {
   ArrowDownLeft,
   ArrowLeft,
@@ -11,43 +11,52 @@ import {
   Folder,
   GitBranch,
   Link2,
+  Menu,
   PanelLeftClose,
   PanelRightClose,
+  Search,
   SquareArrowUpRight,
   X,
 } from 'lucide-react'
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
 import type { Store } from './data'
+import { FindBar } from './Find'
 import { backlinks, branchInfo, outLinks, sameCollection, seeAlso } from './links'
-import { paneVariants, popIn, SPRING_COLUMN } from './motion'
+import { paneVariants, popIn, QUICK } from './motion'
 import { PresenceBoundary } from './PresenceBoundary'
 import { cn, DocLink, ymd } from './ui'
 import type { PendingHeading, Pulse } from './useView'
 import { activeOf, type Action, type Slot, type View } from './view'
 
-// 칸 하나 — 흐름 칸이든 연관 칸이든 같은 모양 (design.md §3 "칸"). 카드·머리 모양은 mongolive 밀러 컬럼
-//   머리: [‹ 폰 뒤로] 흐름|연관 n/m [바로가기] (스크롤하면 제목) [모두 닫기] [접기] [×]
+// 칸 하나 — 흐름 칸이든 연관 칸이든 같은 모양 (design.md §3 "칸"). 11-27 평평한 판: 카드 없이 왼쪽 1px 선으로 이웃과 나뉜다
+//   머리: [☰ 폰 목록] [‹ 폰 뒤로] 흐름|연관 n/m [바로가기] (스크롤하면 제목 + 밑줄) [찾기] [모두 닫기] [접기] [×]
+//   찾기 줄(열었을 때): 이 글 안에서만 찾기 (Find.tsx)
 //   본문: 컬렉션 이름(→ 트리에서 보기) · 이어진 곳 · 제목 · 날짜·태그·↙↗ 개수 · 블록 · 이전/다음 카드 · 연결 목록
 //   오른쪽 위: 목차 줄 → 마우스를 올리면(폰은 누르면) 목록
 // 칸 자체가 AnimatePresence의 직접 자식이라 ref를 넘긴다 (popLayout이 재야 함)
 
 export const styles = {
-  card: 'relative flex min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-panel @container',
-  header: 'flex h-11 shrink-0 items-center gap-0.5 border-b border-slate-100 px-2',
+  // 폭: 두 칸이면 흐름 칸은 반으로 묶고(띠는 연관 쪽에서만 빠진다) 나머지는 남는 폭 — width 클래스는 부르는 쪽이 하나만 고른다
+  card: 'relative flex min-w-0 flex-col overflow-hidden bg-page @container',
+  edge: 'border-l border-line', // 왼쪽 이웃(사이드바·칸·띠)과 나누는 선. 폰은 한 칸이라 없음
+  grow: 'flex-1 basis-0',
+  half: 'w-1/2 flex-none',
+  header: 'flex h-11 shrink-0 items-center gap-0.5 border-b px-2 transition-colors',
   lane: 'shrink-0 whitespace-nowrap px-1.5 text-[11.5px] font-semibold',
   laneIdle: 'text-slate-400',
-  laneFocus: 'text-emerald-700',
-  iconBtn: 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700',
-  textBtn: 'h-7 shrink-0 whitespace-nowrap rounded-md px-2 text-[12px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700',
+  laneFocus: 'text-slate-900',
+  iconBtn: 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-hover hover:text-slate-900',
+  textBtn: 'h-7 shrink-0 whitespace-nowrap rounded-md px-2 text-[12px] text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
   headTitle: 'min-w-0 flex-1 truncate px-1.5 text-[13px] font-semibold text-slate-700',
-  back: 'flex h-7 max-w-[46%] shrink-0 items-center gap-1 rounded-md pl-1 pr-2 text-[12.5px] text-slate-500 hover:bg-slate-100 hover:text-slate-800',
+  back: 'flex h-7 max-w-[46%] shrink-0 items-center gap-1 rounded-md pl-1 pr-2 text-[12.5px] text-slate-500 hover:bg-hover hover:text-slate-900',
   scroll: 'relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain',
   page: 'mx-auto max-w-[760px] pb-16 pl-[22px] pr-10 @[560px]:px-11 @[560px]:pb-[72px]',
-  kick: '-ml-1.5 mt-3.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[12.5px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700',
-  cfrom: 'mt-1.5 flex w-fit max-w-full items-center gap-1.5 rounded-lg bg-slate-50 px-2.5 py-1 text-[12.5px] text-slate-500 transition-colors hover:text-slate-700',
+  kick: '-ml-1.5 mt-3.5 inline-flex max-w-full items-center gap-1.5 rounded-md px-1.5 py-0.5 text-[12.5px] text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
+  cfrom: 'mt-1.5 flex w-fit max-w-full items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-[12.5px] text-slate-500 transition-colors hover:text-slate-900',
   title: 'mt-2 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 [text-wrap:balance] @[560px]:text-[28px]',
   meta: 'mb-[26px] mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] tabular-nums text-slate-500',
-  chip: 'inline-flex h-6 items-center gap-1 rounded-full pl-[7px] pr-[9px] text-[12px] font-semibold',
+  // ↙↗ 개수 — 알약 대신 글자 + 아이콘
+  count: 'inline-flex items-center gap-0.5 rounded px-1 -mx-1 font-medium text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
   gone: 'm-auto p-6 text-center text-[14px] text-slate-500',
 } as const
 
@@ -62,6 +71,8 @@ interface Props {
   docId: string
   view: View
   dir: number // 들어오는 방향 (motion custom)
+  half: boolean // 두 칸일 때 흐름 칸 — 폭을 반으로 묶는다
+  onMenu?: () => void // 폰: 머리 왼쪽 ☰ → 사이드바가 칸을 밀며 나온다
   z: number // 왼쪽 칸일수록 위 (mongolive 밀러 컬럼 99 - 순서) — 들어오는 칸이 흐름 칸 밑에서 빠져나온다
   phone: boolean
   focused: boolean // 지금 보는 칸 — 칸이 둘일 때 "흐름"/"연관" 글자가 초록
@@ -144,14 +155,28 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
 
   const onOpenDoc = useCallback((id: string, heading?: string) => dispatch({ type: 'link', id }, heading), [dispatch])
 
+  // 이 글에서 찾기 — 돋보기, 또는 지금 보는 칸에서 Ctrl/⌘+F. 찾기 칸에 글자 커서가 있으면 그 Ctrl+F는 브라우저에 맡긴다
+  const [find, setFind] = useState(0) // 0 = 닫힘, 그 밖 = 열 때마다 늘어남 (찾기 칸에 커서)
+  const openFind = () => setFind((n) => n + 1)
+  useEffect(() => {
+    if (!p.focused || !doc) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return
+      if ((document.activeElement as HTMLElement | null)?.dataset.findInput !== undefined) return
+      e.preventDefault()
+      openFind()
+    }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [p.focused, doc])
+
   // ── 칸 폭이 바뀔 때 (탭 열기·닫기·접기·띠) — iOS push/pop 전환처럼 ──
   // 애니메이션 동안 본문 폭 = 옛 폭과 새 폭 중 좁은 쪽 → 본문이 칸보다 넓어 양옆이 잘려 보이는 순간이 없다
   //   넓어질 때: 옛(좁은) 폭·여백으로 묶었다가 움직이는 도중에 풀어서 한 번 줄바꿈 — 끝나고 툭 바뀌지 않게.
   //             푸는 때 = 칸이 70%쯤 넓어졌고 새 폭 글자가 칸 안에 들어갈 때 (여백만 잘리는 건 안 보이니 봐줌)
   //   좁아질 때: 묶지 않음 — 처음부터 새(좁은) 폭으로 줄바꿈
-  // 가운데 따라가기: 본문은 첫 프레임부터 '끝 자리'(새 칸 가운데)에 놓이고 칸의 보이는 가장자리만 스프링으로 움직인다 →
-  //   애니메이션 동안 매 프레임 칸의 '보이는 상자' 가운데를 재서 본문을 거기로 옮긴다 (framer 프레임 루프의 postRender —
-  //   framer가 그 프레임의 칸 transform을 쓴 뒤, 그리기 전). 칸 애니메이션이 끝나면 멈춘다
+  // 가운데 따라가기: 본문은 첫 프레임부터 '끝 자리'(새 칸 가운데)에 놓이고 칸의 보이는 가장자리만 움직인다 →
+  //   애니메이션 동안 그림마다 칸의 '보이는 상자' 가운데를 재서 본문을 거기로 옮긴다 (아래 startFollow). 칸 애니메이션이 끝나면 멈춘다
   //   안 된 방법: 본문 layout="position"(옛/새 상자의 왼쪽 끝을 맞춰서 (옛 폭 − 새 폭)/2 어긋남),
   //   따로 돈 스프링 x(칸 layout 애니메이션이 몇 프레임 늦게 시작해서 어긋남)
   // 묶기는 그리기 전(useLayoutEffect)에 — 커밋 직후 첫 화면부터 옛 폭
@@ -168,42 +193,37 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
     const cs = getComputedStyle(a)
     box.current = { card: c.offsetWidth, w: a.offsetWidth, pl: cs.paddingLeft, pr: cs.paddingRight }
   }
+  const innerRef = useRef<HTMLDivElement | null>(null)
   const followX = useRef(0)
-  const follower = useRef<(() => void) | null>(null)
+  const watcher = useRef<MutationObserver | null>(null)
   const stopFollow = () => {
-    if (follower.current) cancelFrame(follower.current)
-    follower.current = null
+    watcher.current?.disconnect()
+    watcher.current = null
     followX.current = 0
     if (articleRef.current) articleRef.current.style.transform = ''
   }
-  const startFollow = () => {
-    if (!follower.current) startTick() // 이미 따라가는 중이면 (연달아 바뀜) 같은 루프가 새 가운데를 따라간다
-    // 첫 프레임: framer는 커밋 직후 마이크로태스크에서 update·preRender·render만 바로 돌려(postRender 빠짐) 첫 그림에 칸 transform을 넣는다 →
-    //   그 뒤에 한 번 맞춘다. 그 마이크로태스크가 이것보다 늦게 줄 서 있을 수 있어서, 칸 transform이 바뀔 때까지 몇 번 미룬다
-    //   (끝내 안 바뀌면 = 이번 프레임은 framer 루프가 그린다 → postRender가 맞춘다)
-    const t0 = cardRef.current?.style.transform
-    let tries = 0
-    const first = () => {
-      if (!follower.current) return
-      if (cardRef.current?.style.transform === t0 && ++tries < 4) return queueMicrotask(first)
-      follower.current()
-    }
-    queueMicrotask(first)
+  // 칸의 보이는 상자(transform 포함) 가운데로 본문을 옮긴다. 묶여 있고 칸이 충분히 넓어졌으면 먼저 풀고 잰다 (같은 그림)
+  const follow = () => {
+    const a = articleRef.current
+    const c = cardRef.current
+    if (!a || !c) return stopFollow()
+    const cr = c.getBoundingClientRect()
+    if (frozen.current && cr.width >= releaseAt.current) release()
+    const ar = a.getBoundingClientRect()
+    const natural = (ar.left + ar.right) / 2 - followX.current
+    followX.current = (cr.left + cr.right) / 2 - natural
+    a.style.transform = `translateX(${followX.current}px)`
   }
-  const startTick = () => {
-    const tick = () => {
-      const a = articleRef.current
-      const c = cardRef.current
-      if (!a || !c) return stopFollow()
-      const cr = c.getBoundingClientRect() // 보이는 상자 (transform 포함)
-      if (frozen.current && cr.width >= releaseAt.current) release() // 아래에서 본문을 재며 새 폭으로 줄바꿈 — 같은 프레임
-      const ar = a.getBoundingClientRect()
-      const natural = (ar.left + ar.right) / 2 - followX.current
-      followX.current = (cr.left + cr.right) / 2 - natural
-      a.style.transform = `translateX(${followX.current}px)`
+  // framer가 칸·안쪽 감싸개의 transform을 쓸 때마다 따라간다 (MutationObserver = 쓴 직후 마이크로태스크, 그리기 전).
+  //   framer는 프레임 루프 말고도 다시 그리기(커밋) 직후 마이크로태스크에서 transform을 바로 쓴다 — 첫 프레임, 그리고
+  //   애니메이션 도중 다른 칸의 본문이 도착해 다시 그릴 때. 프레임 루프(postRender)에 걸었더니 그 그림을 놓쳐 한 프레임씩 튀었다
+  const startFollow = () => {
+    if (!watcher.current) {
+      const w = new MutationObserver(() => follow())
+      for (const el of [cardRef.current, innerRef.current]) if (el) w.observe(el, { attributes: true, attributeFilter: ['style'] })
+      watcher.current = w
     }
-    follower.current = tick
-    frame.postRender(tick, true)
+    follow()
   }
   const release = () => {
     releaseAt.current = Infinity
@@ -253,7 +273,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   useEffect(
     () => () => {
       clearTimeout(unfreezeT.current)
-      if (follower.current) cancelFrame(follower.current)
+      watcher.current?.disconnect()
     },
     [],
   )
@@ -274,7 +294,12 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   const title = doc?.title ?? meta?.title ?? ''
 
   const header = (
-    <div className={styles.header}>
+    <div className={cn(styles.header, spy.title ? 'border-line' : 'border-transparent')}>
+      {p.onMenu && (
+        <button type="button" className={styles.iconBtn} onClick={p.onMenu} aria-label="목록 열기" data-tt="목록 열기" data-menu>
+          <Menu size={18} />
+        </button>
+      )}
       {backTo && p.phone && (
         <button type="button" className={styles.back} onClick={() => dispatch({ type: 'back' })} data-tt="이 탭 닫고 한 단계 전 글로">
           <ChevronLeft size={15} className="shrink-0" aria-hidden />
@@ -304,6 +329,11 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
       <m.span className={styles.headTitle} initial={false} animate={{ opacity: spy.title ? 1 : 0 }} transition={{ duration: 0.15 }} data-head-title={spy.title || undefined}>
         {title}
       </m.span>
+      {doc && (
+        <button type="button" className={styles.iconBtn} onClick={openFind} aria-label="이 글에서 찾기" data-tt="이 글에서 찾기 (Ctrl+F)" data-find-open>
+          <Search size={15} />
+        </button>
+      )}
       {slot === 'rel' ? (
         <>
           {n > 1 && (
@@ -358,12 +388,12 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
           if (img && img.closest('figure') && !img.closest('a')) p.onZoom({ src: img.currentSrc || img.src, alt: img.alt })
         }}
       >
-        <button type="button" className={styles.kick} onClick={() => p.onReveal(doc.id)} data-tt="사이드바 트리에서 보기">
+        <button type="button" className={styles.kick} onClick={() => p.onReveal(doc.id)} data-tt="사이드바 트리에서 보기" data-nofind>
           <Folder size={13} className="shrink-0" aria-hidden />
           <span className="truncate">{col?.path.join(' › ')}</span>
         </button>
         {crossPrev && (
-          <DocLink id={crossPrev.id} onGo={() => dispatch({ type: 'step', slot, id: crossPrev.id })} className={styles.cfrom} data-cfrom>
+          <DocLink id={crossPrev.id} onGo={() => dispatch({ type: 'step', slot, id: crossPrev.id })} className={styles.cfrom} data-cfrom data-nofind>
             <CornerUpLeft size={13} className="shrink-0" aria-hidden />
             <span className="truncate">
               <b className="font-semibold text-slate-700">
@@ -376,32 +406,26 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
         <h1 className={styles.title} data-title>
           {doc.title}
         </h1>
-        <div className={styles.meta}>
+        <div className={styles.meta} data-nofind>
           <span>{ymd(doc.createdAt)}</span>
           {doc.tags.map((t) => (
-            <span key={t} className="text-emerald-700">
-              #{t}
-            </span>
+            <span key={t}>#{t}</span>
           ))}
-          {(bl.length > 0 || ol.length > 0) && (
-            <span className="inline-flex gap-1.5">
-              {bl.length > 0 && (
-                <button type="button" className={cn(styles.chip, 'bg-sky-50 text-sky-700')} onClick={() => scrollToAnchor(`links-in-${slot}`)} data-tt={`이 글을 가리키는 글 ${bl.length}개`}>
-                  <ArrowDownLeft size={13} aria-hidden />
-                  {bl.length}
-                </button>
-              )}
-              {ol.length > 0 && (
-                <button type="button" className={cn(styles.chip, 'bg-amber-50 text-amber-700')} onClick={() => scrollToAnchor(`links-out-${slot}`)} data-tt={`이 글이 가리키는 글 ${ol.length}개`}>
-                  <ArrowUpRight size={13} aria-hidden />
-                  {ol.length}
-                </button>
-              )}
-            </span>
+          {bl.length > 0 && (
+            <button type="button" className={styles.count} onClick={() => scrollToAnchor(`links-in-${slot}`)} data-tt={`이 글을 가리키는 글 ${bl.length}개`} data-count="in">
+              <ArrowDownLeft size={14} aria-hidden />
+              {bl.length}
+            </button>
+          )}
+          {ol.length > 0 && (
+            <button type="button" className={styles.count} onClick={() => scrollToAnchor(`links-out-${slot}`)} data-tt={`이 글이 가리키는 글 ${ol.length}개`} data-count="out">
+              <ArrowUpRight size={14} aria-hidden />
+              {ol.length}
+            </button>
           )}
         </div>
         <BlockRenderer blocks={doc.blocks} onOpenDoc={onOpenDoc} />
-        <footer className="mt-11 flex flex-col gap-7 border-t border-slate-200 pt-6">
+        <footer className="mt-11 flex flex-col gap-7 border-t border-line pt-6">
           <Pager ix={ix} doc={doc} slot={slot} dispatch={dispatch} />
           <Links ix={ix} doc={doc} slot={slot} view={view} dispatch={dispatch} />
         </footer>
@@ -418,11 +442,10 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
       initial="enter"
       animate="center"
       exit="exit"
-      transition={SPRING_COLUMN}
+      transition={QUICK}
       layout
-      // borderRadius를 style로 줘야 크기 애니메이션 중 둥근 모서리도 보정된다
-      style={{ zIndex: p.z, borderRadius: 16 }}
-      className={styles.card}
+      style={{ zIndex: p.z }}
+      className={cn(styles.card, p.half ? styles.half : styles.grow, !p.phone && styles.edge)}
       data-slot={slot}
       data-focus={(p.focused && hasRel) || undefined}
       aria-label={`${slot === 'main' ? '흐름' : '연관'}: ${title}`}
@@ -431,8 +454,11 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
       <PresenceBoundary>
         {/* 칸 크기가 바뀌는 동안(layout) 카드는 transform으로 늘고 준다 — 안쪽은 layout="position"이라
             framer가 반대로 보정해서 글자가 늘어나 보이지 않는다. 안쪽은 바로 새 폭으로 그려지고 카드가 잘라 보여 준다 */}
-        <m.div layout="position" className="flex min-h-0 flex-1 flex-col">
+        {/* 안쪽 감싸개도 칸과 같은 움직임 값 — 따로 두면 framer 기본(0.45초)으로 돌아, 칸 왼쪽 끝이 옮겨 갈 때(연관 칸)
+            칸이 멈춘 뒤에도 본문이 미끄러졌다 */}
+        <m.div ref={innerRef} layout="position" transition={QUICK} className="flex min-h-0 flex-1 flex-col">
           {header}
+          {find > 0 && doc && <FindBar slot={slot} rootRef={articleRef} scrollRef={scrollRef} ready={doc} focusN={find} onClose={() => setFind(0)} />}
           <div className="relative flex min-h-0 flex-1">
             <div className={styles.scroll} ref={scrollRef} onScroll={onScroll} data-scroll>
               {page}
@@ -443,7 +469,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
         {p.flash?.slot === slot && (
           <m.div
             key={p.flash.n}
-            className="pointer-events-none absolute inset-0 z-20 rounded-2xl ring-2 ring-inset ring-emerald-600"
+            className="pointer-events-none absolute inset-0 z-20 ring-2 ring-inset ring-accent-500"
             initial={{ opacity: 1 }}
             animate={{ opacity: [1, 1, 0] }}
             transition={{ duration: 1, times: [0, 0.4, 1] }}
@@ -495,7 +521,7 @@ function Toc({ heads, current, onGo }: { heads: BlockOf<'heading'>[]; current: s
         {open && (
           <m.div
             {...popIn}
-            className="absolute right-0 top-0 max-h-[min(62vh,480px)] w-[min(264px,calc(100cqw-32px))] origin-top-right overflow-auto rounded-xl border border-slate-200 bg-white p-1.5 shadow-elevated"
+            className="absolute right-0 top-0 max-h-[min(62vh,480px)] w-[min(264px,calc(100cqw-32px))] overflow-auto rounded-lg border border-line bg-page p-1.5 shadow-pop"
             data-toc-panel
           >
             {heads.map((h) => (
@@ -503,7 +529,7 @@ function Toc({ heads, current, onGo }: { heads: BlockOf<'heading'>[]; current: s
                 key={h.anchor}
                 type="button"
                 className={cn(
-                  'block w-full rounded-md px-2.5 py-1.5 text-left text-[13px] leading-snug transition-colors hover:bg-slate-100 hover:text-slate-900',
+                  'block w-full rounded-md px-2.5 py-1.5 text-left text-[13px] leading-snug transition-colors hover:bg-hover hover:text-slate-900',
                   h.anchor === current ? 'font-semibold text-slate-900' : 'text-slate-500',
                 )}
                 style={{ paddingLeft: 10 + (h.level - minLv) * 14 }}
@@ -525,10 +551,10 @@ function Toc({ heads, current, onGo }: { heads: BlockOf<'heading'>[]; current: s
 }
 
 const pg = {
-  card: 'flex min-w-0 flex-col gap-1 rounded-2xl border border-slate-200 px-4 py-3 transition-colors hover:border-emerald-300 hover:bg-slate-50',
+  card: 'flex min-w-0 flex-col gap-1 rounded-lg border border-line px-4 py-3 transition-colors hover:border-slate-300 hover:bg-hover',
   k: 'flex items-center gap-1.5 text-[12.5px] text-slate-500',
   t: 'line-clamp-2 text-[15px] font-semibold leading-snug text-slate-900',
-  xc: 'w-fit whitespace-nowrap rounded-full bg-slate-100 px-1.5 py-px text-[11.5px] text-slate-500',
+  xc: 'w-fit whitespace-nowrap text-[11.5px] text-slate-400', // 다른 컬렉션 — 알약 대신 흐린 글자
 } as const
 
 // 이전/다음 — 지금 칸 안에서 (흐름 칸이면 흐름 글, 연관 칸이면 펼친 탭만 바뀜). 다음 글이 여럿이면 갈래 목록
@@ -555,7 +581,7 @@ function Pager({ ix, doc, slot, dispatch }: { ix: GraphIndex; doc: Doc; slot: Sl
     )
   } else if (nexts.length > 1) {
     right = (
-      <div className="flex min-w-0 flex-col gap-0.5 rounded-2xl border border-slate-200 px-2 pb-2 pt-2.5">
+      <div className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-line px-2 pb-2 pt-2.5">
         <span className={cn(pg.k, 'justify-end px-2 pb-1')}>
           다음 · 갈래 {nexts.length}
           <GitBranch size={14} aria-hidden />
@@ -564,7 +590,7 @@ function Pager({ ix, doc, slot, dispatch }: { ix: GraphIndex; doc: Doc; slot: Sl
           const cross = nx.collectionId !== doc.collectionId
           const info = cross ? null : branchInfo(ix, nx.id)
           return (
-            <DocLink key={nx.id} id={nx.id} onGo={step(nx.id)} className="flex min-w-0 items-center gap-2 rounded-lg px-2 py-1.5 transition-colors hover:bg-slate-100" data-pg="branch">
+            <DocLink key={nx.id} id={nx.id} onGo={step(nx.id)} className="flex min-w-0 items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-hover" data-pg="branch">
               <span className="shrink-0 font-mono text-[13px] leading-none text-slate-400">{k < nexts.length - 1 ? '├' : '└'}</span>
               <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-slate-900" data-pg-title>
                 {nx.title}
@@ -589,7 +615,7 @@ function Pager({ ix, doc, slot, dispatch }: { ix: GraphIndex; doc: Doc; slot: Sl
       </div>
     )
   } else if (prev) {
-    right = <span className="flex items-center justify-center rounded-2xl border border-dashed border-slate-200 px-4 py-3 text-[13px] text-slate-400">이 갈래의 마지막 글</span>
+    right = <span className="flex items-center justify-center rounded-lg border border-dashed border-line px-4 py-3 text-[13px] text-slate-400">이 갈래의 마지막 글</span>
   }
 
   return (
@@ -612,8 +638,8 @@ function Pager({ ix, doc, slot, dispatch }: { ix: GraphIndex; doc: Doc; slot: Sl
 }
 
 const rr = {
-  row: 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5',
-  live: 'transition-colors hover:bg-slate-100',
+  row: 'flex w-full items-center gap-2.5 rounded-md px-2.5 py-1.5',
+  live: 'transition-colors hover:bg-hover',
   dead: 'cursor-not-allowed',
   t: 'min-w-0 flex-1 truncate text-[14.5px]',
   m: 'whitespace-nowrap text-[12px] text-slate-400',
@@ -636,7 +662,7 @@ function Links({ ix, doc, slot, view, dispatch }: { ix: GraphIndex; doc: Doc; sl
     return (
       <DocLink key={id} id={id} onGo={() => dispatch({ type: 'link', id })} className={cn(rr.row, rr.live)} data-rr>
         <span className={cn(rr.t, 'text-slate-900')}>{d.title}</span>
-        {w && <span className="whitespace-nowrap rounded-full bg-emerald-50 px-2 py-px text-[11.5px] text-emerald-700">{w}</span>}
+        {w && <span className="whitespace-nowrap text-[12px] font-medium text-slate-500">{w}</span>}
         {!sameCollection(ix, id, doc.id) && <span className={rr.m}>{ix.collectionsById.get(d.collectionId)?.title}</span>}
       </DocLink>
     )

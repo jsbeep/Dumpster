@@ -1,6 +1,7 @@
 // mongolive components/common/TooltipLayer.tsx 그대로 — 컨트롤은 data-tt="설명"만 단다 (title 속성 대신)
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { DotLegend } from './Tree'
 
 // ── 툴팁 레이어 ───────────────────────────────────────────────────────────────
 // 앱 전체에 하나만 마운트되는 툴팁. 각 컨트롤은 `data-tt="설명"` 속성만 달면 되고
@@ -14,11 +15,13 @@ import { createPortal } from 'react-dom'
 // 둘 다 "조상 밖으로 나가야" 풀리는 문제라서 body portal이 유일한 해법이다.
 
 const SHOW_DELAY_MS = 650
+const LEGEND_DELAY_MS = 300 // 트리 점 범례 (data-legend="모양 상태") — 점이 작아서 금방 띄운다
 const GAP = 6; // 앵커와 툴팁 사이 간격
 const EDGE = 8; // 뷰포트 가장자리 최소 여백
 
 interface TipState {
   text: string
+  legend?: string[]
   anchor: DOMRect
   side: 'top' | 'bottom'
   align: 'left' | 'right'
@@ -51,12 +54,13 @@ export function TooltipLayer() {
     }
 
     const findAnchor = (node: EventTarget | null): HTMLElement | null =>
-      node instanceof Element ? (node.closest('[data-tt]') as HTMLElement | null) : null
+      node instanceof Element ? (node.closest('[data-tt], [data-legend]') as HTMLElement | null) : null
 
     const handleOver = (event: PointerEvent) => {
       const anchor = findAnchor(event.target)
-      const text = anchor?.dataset.tt
-      if (!anchor || !text) return
+      const text = anchor?.dataset.tt ?? ''
+      const legend = anchor?.dataset.legend
+      if (!anchor || (!text && legend === undefined)) return
       // 같은 앵커 안에서 자식 사이를 이동한 것뿐이면 그대로 둔다
       if (anchor === anchorRef.current) return
 
@@ -66,11 +70,12 @@ export function TooltipLayer() {
       timerRef.current = window.setTimeout(() => {
         setTip({
           text,
+          legend: legend?.split(' '),
           anchor: anchor.getBoundingClientRect(),
           side: anchor.dataset.ttSide === 'top' ? 'top' : 'bottom',
           align: anchor.dataset.ttAlign === 'left' ? 'left' : 'right',
         })
-      }, SHOW_DELAY_MS)
+      }, legend === undefined ? SHOW_DELAY_MS : LEGEND_DELAY_MS)
     }
 
     const handleOut = (event: PointerEvent) => {
@@ -124,7 +129,11 @@ export function TooltipLayer() {
     <div
       ref={tipRef}
       role="tooltip"
-      className="fixed z-[900] max-w-[216px] rounded-lg bg-slate-900 px-2 py-1.5 text-[11px] font-medium leading-snug text-slate-50 shadow-elevated pointer-events-none transition-opacity duration-100"
+      className={
+        tip.legend
+          ? 'pointer-events-none fixed z-[900] rounded-lg border border-line bg-page px-3 py-2.5 shadow-pop transition-opacity duration-100'
+          : 'pointer-events-none fixed z-[900] max-w-[216px] rounded-md bg-slate-900 px-2 py-1.5 text-[11px] font-medium leading-snug text-slate-50 shadow-pop transition-opacity duration-100'
+      }
       style={{
         // 좌표를 재기 전(pos === null)엔 화면 밖에 둔다 — opacity만 0으로 두면
         // 전환 중인 프레임이 (0,0)에 잠깐 보인다.
@@ -133,7 +142,7 @@ export function TooltipLayer() {
         opacity: pos ? 1 : 0,
       }}
     >
-      {tip.text}
+      {tip.legend ? <DotLegend on={tip.legend} /> : tip.text}
     </div>,
     document.body,
   )

@@ -1,49 +1,57 @@
 import type { GraphIndex, TreeRow } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, CornerUpLeft } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { descendants, type LinkMark } from './links'
 import { collapseY } from './motion'
 import { cn, DocLink } from './ui'
 import { activeOf, type View } from './view'
 
 // 컬렉션 트리 한 개 (design.md §3 "트리 표시") — 행 모양은 mongolive 사이드바 트리(DatabaseTree)
-//   점 모양 = 글 종류 (일반 / 분기점 / 매니페스트), 색·테두리 = 어느 칸에 열려 있나
-//   흐름 글 = 꽉 찬 초록 + 행 바탕, 펼친 탭 = 꽉 찬 초록 + 큰 테두리 + `연관` 배지, 띠에 있는 탭 = 큰 테두리만
+//   점 모양 = 글 종류 (일반 / 분기점 / 매니페스트), 칠·고리 = 어느 칸에 열려 있나 (11-27 초록 → 무채색 강조색)
+//   흐름 글 = 꽉 찬 점 + 행 바탕 + 굵게, 펼친 탭 = 꽉 찬 점 + 고리 + `연관`, 띠에 있는 탭 = 고리만
+//   점에 마우스를 올리면 범례 (TooltipLayer가 data-legend를 보고 DotLegend를 띄운다)
 //   흐름 글·펼친 탭 글의 조상 갈래는 접어 둬도 항상 펼친다
 // 줄(git graph식)은 칸마다 16px — 세로줄·가로줄을 진짜 span으로 그린다
+// 점의 속(속 빈 점)과 고리 틈은 --dot-bg = 그 행의 바탕색 (행 바탕이 바뀌면 같이 바뀐다 — 불투명 색만)
 
 const styles = {
   row: 'group relative flex h-7 items-center gap-0.5 rounded-md pr-1 text-[13px] transition-colors',
-  rowIdle: 'hover:bg-slate-100',
-  rowSel: 'bg-selected',
-  rowHl: 'ring-[1.5px] ring-inset ring-sky-600',
+  rowIdle: '[--dot-bg:var(--side)] hover:bg-side-hover hover:[--dot-bg:var(--side-hover)]',
+  rowSel: 'bg-selected [--dot-bg:rgb(var(--c-selected))]',
+  rowHl: 'ring-[1.5px] ring-inset ring-accent-400',
   link: 'flex min-w-0 flex-1 items-stretch self-stretch pl-1',
   // 글자색·굵기는 셋 중 하나만 (cn은 겹치는 클래스를 정리하지 않는다 — 겹치면 CSS 순서로 엉뚱한 게 이김)
   title: 'min-w-0 flex-1 self-center truncate px-1.5',
   titleIdle: 'text-slate-600',
-  titleSel: 'font-medium text-emerald-700',
+  titleSel: 'font-bold text-slate-900',
   titleAct: 'font-semibold text-slate-900',
   cell: 'relative w-4 shrink-0',
   v: 'absolute left-[7px] border-l-[1.5px] border-slate-300', // 세로줄
   h: 'absolute top-[calc(50%-0.75px)] border-t-[1.5px] border-slate-300', // 가로줄
-  // 점: 모양(원/둥근 네모) · 칠(속 빈/꽉 찬 초록/진회색) · 고리를 각각 하나씩만 고른다
-  dot: 'absolute left-[3.25px] top-[calc(50%-4.75px)] z-[1] h-[9.5px] w-[9.5px] border-2',
-  dotRound: 'rounded-full',
-  dotSquare: 'rounded-[3px]', // 매니페스트
-  fillIdle: 'border-slate-400 bg-white',
-  fillFork: 'border-slate-700 bg-white', // 분기점
-  fillMan: 'border-slate-700 bg-slate-700',
-  fillSel: 'border-emerald-600 bg-emerald-600', // 흐름 글 · 펼친 탭
-  // 탭에 있는 글 = 초록 고리 (사이드바 카드 바탕색 틈 1.5px + 고리 1.5px)
-  dotOpen: 'shadow-[0_0_0_1.5px_rgb(var(--c-white)),0_0_0_3px_rgb(var(--c-emerald-600))]',
-  badge: 'shrink-0 whitespace-nowrap rounded-full bg-emerald-50 px-1.5 text-[11px] font-semibold text-emerald-700',
-  mark: 'grid h-5 w-5 shrink-0 place-items-center rounded-md',
-  markIn: 'bg-sky-50 text-sky-700',
-  markOut: 'bg-amber-50 text-amber-700',
-  from: 'flex max-w-[44%] items-center gap-1 overflow-hidden whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11.5px] text-slate-500 transition-colors hover:bg-slate-200/70 hover:text-slate-700',
-  fold: 'flex h-5 shrink-0 items-center gap-px rounded px-1 text-[11px] tabular-nums text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-700',
+  badge: 'shrink-0 whitespace-nowrap px-1 text-[11px] font-semibold text-slate-500',
+  mark: 'grid h-5 w-5 shrink-0 place-items-center text-slate-500',
+  from: 'flex max-w-[44%] items-center gap-1 overflow-hidden whitespace-nowrap rounded-md px-1.5 py-0.5 text-[11.5px] text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
+  fold: 'flex h-5 shrink-0 items-center gap-px rounded px-1 text-[11px] tabular-nums text-slate-400 transition-colors hover:bg-hover hover:text-slate-900',
   sep: 'mx-2 mb-1 mt-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wider text-slate-400',
 } as const
+
+// 점: 모양(원/둥근 네모) · 칠 · 고리를 각각 하나씩만 고른다 (같은 속성 클래스 두 개 금지)
+export type DotShape = 'idle' | 'fork' | 'man'
+export type DotState = 'sel' | 'act' | 'open' | ''
+const dot = {
+  base: 'absolute left-[3.25px] top-[calc(50%-4.75px)] z-[1] h-[9.5px] w-[9.5px] border-2',
+  round: 'rounded-full',
+  square: 'rounded-[3px]', // 매니페스트
+  idle: 'border-slate-400 bg-[var(--dot-bg)]',
+  fork: 'border-slate-700 bg-[var(--dot-bg)]', // 분기점
+  man: 'border-slate-500 bg-slate-500', // 흐름 글(꽉 찬 진한 점)과 헷갈리지 않게 한 단계 옅게
+  sel: 'border-accent-600 bg-accent-600', // 흐름 글 · 펼친 탭
+  // 탭에 있는 글 = 고리 (행 바탕색 틈 1.5px + 고리 1.5px)
+  open: 'shadow-[0_0_0_1.5px_var(--dot-bg),0_0_0_3px_rgb(var(--c-accent-600))]',
+}
+export const dotClass = (shape: DotShape, state: DotState) =>
+  cn(dot.base, shape === 'man' ? dot.square : dot.round, state === 'sel' || state === 'act' ? dot.sel : dot[shape], (state === 'act' || state === 'open') && dot.open)
 
 interface Props {
   ix: GraphIndex
@@ -81,6 +89,8 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
     const mk = marks.get(r.docId)
     const from = r.continuesFrom ? ix.docsById.get(r.continuesFrom) : undefined
     const fromCol = from && ix.collectionsById.get(from.collectionId)
+    const shape: DotShape = d.kind === 'manifest' ? 'man' : r.forks > 1 ? 'fork' : 'idle'
+    const state: DotState = isSel ? 'sel' : isAct ? 'act' : inTabs.has(r.docId) ? 'open' : ''
     return (
       <m.div key={r.docId} {...collapseY} className="overflow-hidden">
         <div
@@ -103,18 +113,10 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
                   <span className={cn(styles.h, 'left-[7px] right-0')} />
                 </span>
               )}
-              <span className={styles.cell}>
+              <span className={styles.cell} data-legend={`${shape} ${state}`.trim()} data-tt-align="left">
                 {r.branch !== 'none' && <span className={cn(styles.h, 'left-0 w-2')} />}
                 {(up || down) && <span className={cn(styles.v, up && down ? 'inset-y-0' : up ? 'top-0 h-1/2' : 'bottom-0 top-1/2')} />}
-                <span
-                  data-dot={isSel || isAct ? 'sel' : inTabs.has(r.docId) ? 'open' : ''}
-                  className={cn(
-                    styles.dot,
-                    d.kind === 'manifest' ? styles.dotSquare : styles.dotRound,
-                    isSel || isAct ? styles.fillSel : d.kind === 'manifest' ? styles.fillMan : r.forks > 1 ? styles.fillFork : styles.fillIdle,
-                    inTabs.has(r.docId) && styles.dotOpen,
-                  )}
-                />
+                <span data-dot={isSel || isAct ? 'sel' : inTabs.has(r.docId) ? 'open' : ''} className={dotClass(shape, state)} />
               </span>
             </span>
             <span className={cn(styles.title, isSel ? styles.titleSel : isAct ? styles.titleAct : styles.titleIdle)} data-row-title>
@@ -133,12 +135,12 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
             </span>
           )}
           {mk?.in && (
-            <span className={cn(styles.mark, styles.markIn)} data-mark="in" data-tt="보고 있는 글을 가리키는 글">
+            <span className={styles.mark} data-mark="in" data-tt="보고 있는 글을 가리키는 글">
               <ArrowDownLeft size={13} aria-hidden />
             </span>
           )}
           {mk?.out && (
-            <span className={cn(styles.mark, styles.markOut)} data-mark="out" data-tt="보고 있는 글이 가리키는 글">
+            <span className={styles.mark} data-mark="out" data-tt="보고 있는 글이 가리키는 글">
               <ArrowUpRight size={13} aria-hidden />
             </span>
           )}
@@ -167,10 +169,55 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
       {orphans.length > 0 && (
         <div key="sep" className={styles.sep}>
           따로 읽는 글
-          <span className="flex-1 border-t border-dashed border-slate-200" />
+          <span className="flex-1 border-t border-dashed border-line" />
         </div>
       )}
       {orphans.map(row)}
     </AnimatePresence>
+  )
+}
+
+// 점 범례 — 트리 점에 마우스를 올리면 (TooltipLayer). on = 올린 점의 모양·상태 (그 줄을 진하게)
+const LEGEND: { group: string; rows: { key: string; icon: ReactNode; label: string }[] }[] = [
+  {
+    group: '글 종류',
+    rows: [
+      { key: 'idle', icon: <span className={dotClass('idle', '')} />, label: '글' },
+      { key: 'fork', icon: <span className={dotClass('fork', '')} />, label: '여기서 갈래가 나뉘는 글' },
+      { key: 'man', icon: <span className={dotClass('man', '')} />, label: '컬렉션 소개 글' },
+    ],
+  },
+  {
+    group: '열린 곳',
+    rows: [
+      { key: 'sel', icon: <span className={dotClass('idle', 'sel')} />, label: '흐름 칸에 연 글' },
+      { key: 'act', icon: <span className={dotClass('idle', 'act')} />, label: '연관 칸에 펼친 글' },
+      { key: 'open', icon: <span className={dotClass('idle', 'open')} />, label: '연관 탭(띠)에 있는 글' },
+    ],
+  },
+  {
+    group: '오른쪽 표시',
+    rows: [
+      { key: 'in', icon: <ArrowDownLeft size={13} className="text-slate-500" />, label: '보고 있는 글을 가리키는 글' },
+      { key: 'out', icon: <ArrowUpRight size={13} className="text-slate-500" />, label: '보고 있는 글이 가리키는 글' },
+    ],
+  },
+]
+
+export function DotLegend({ on }: { on: string[] }) {
+  return (
+    <div className="flex flex-col gap-2 [--dot-bg:var(--page-bg)]" data-dot-legend>
+      {LEGEND.map((g) => (
+        <div key={g.group}>
+          <p className="mb-0.5 text-[10.5px] font-semibold text-slate-400">{g.group}</p>
+          {g.rows.map((r) => (
+            <p key={r.key} className={cn('flex h-6 items-center gap-1.5 whitespace-nowrap text-[12px]', on.includes(r.key) ? 'font-semibold text-slate-900' : 'text-slate-500')} data-on={on.includes(r.key) || undefined}>
+              <span className="relative grid h-4 w-4 shrink-0 place-items-center">{r.icon}</span>
+              {r.label}
+            </p>
+          ))}
+        </div>
+      ))}
+    </div>
   )
 }

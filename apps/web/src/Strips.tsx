@@ -2,11 +2,11 @@ import type { GraphIndex } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { Link2, PanelRightOpen, X } from 'lucide-react'
 import { forwardRef, useEffect, useRef, useState, type ReactElement } from 'react'
-import { paneVariants, popIn, SPRING_COLUMN, SPRING_SNAPPY } from './motion'
+import { paneVariants, popIn, QUICK } from './motion'
 import { cn } from './ui'
 import type { Action, View } from './view'
 
-// 띠 (design.md §3 "칸") — 좁은 카드 (mongolive 밀러 컬럼 카드를 세로로 접은 모양)
+// 띠 (design.md §3 "칸") — 46px 세로 줄, 사이드바 바탕색. 왼쪽 1px 선으로 이웃과 나뉜다 (11-27 평평한 판)
 //   FlowSpine: 접힌 흐름 칸 — 누르면 펼침
 //   Stack    : 펼치지 않은 연관 탭. 왼쪽 = 펼친 탭 앞쪽, 오른쪽 = 뒤쪽, 둘 다 위가 펼친 탭에 가까운 글.
 //              연관 칸까지 접으면 펼친 탭도 왼쪽 띠 맨 위로. 한쪽 5개 넘으면 먼 건 +n 목록(거기서도 닫기)
@@ -15,23 +15,25 @@ import type { Action, View } from './view'
 const MAX_SEG = 5
 
 const styles = {
-  card: 'relative flex w-11 shrink-0 flex-col rounded-2xl border border-slate-200/80 bg-white/70 shadow-panel',
-  vtitle: 'min-h-0 shrink overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold text-slate-700 [writing-mode:vertical-rl]',
-  seg: 'group flex max-h-60 min-h-0 flex-1 basis-0 flex-col border-b border-slate-100 last:border-b-0',
-  segBtn: 'flex min-h-0 flex-1 flex-col items-center gap-2.5 pb-1.5 pt-3 transition-colors hover:bg-slate-100 hover:text-slate-800',
+  card: 'relative flex w-[46px] shrink-0 flex-col border-l border-line bg-side',
+  // 세로쓰기 제목 — 끝 글자가 잘리지 않게 pb-2 (한글은 글자 상자가 커서 overflow-hidden 끝에서 아래가 깎인다)
+  vtitle: 'min-h-0 shrink overflow-hidden text-ellipsis whitespace-nowrap pb-2 text-[13px] font-semibold text-slate-700 [writing-mode:vertical-rl]',
+  // 탭 한 칸 = 제목 길이만큼 (길면 240px에서 말줄임). 많아서 넘치면 다 같이 줄어든다
+  seg: 'group flex max-h-60 min-h-0 shrink flex-col border-b border-line',
+  segBtn: 'flex min-h-0 flex-col items-center gap-2 pt-3 transition-colors hover:bg-side-hover hover:text-slate-900',
   segIdle: 'text-slate-400',
-  segCur: 'text-emerald-700',
-  close: 'grid h-7 shrink-0 place-items-center text-slate-400 opacity-50 transition-colors hover:bg-slate-100 hover:text-rose-600 group-hover:opacity-100',
+  segCur: 'text-slate-900',
+  close: 'grid h-7 shrink-0 place-items-center text-slate-400 opacity-50 transition-colors hover:bg-side-hover hover:text-rose-600 group-hover:opacity-100',
 } as const
 
 const motionProps = (dir: number, z: number) => ({
-  style: { zIndex: z, borderRadius: 16 },
+  style: { zIndex: z },
   custom: dir,
   variants: paneVariants,
   initial: 'enter',
   animate: 'center',
   exit: 'exit',
-  transition: SPRING_COLUMN,
+  transition: QUICK,
   layout: true,
 })
 
@@ -40,12 +42,12 @@ export const FlowSpine = forwardRef<HTMLElement, { title: string; z: number; dis
     <m.section ref={ref} {...motionProps(-1, z)} className={cn(styles.card, 'overflow-hidden')} data-slot="main" data-spine>
       <button
         type="button"
-        className="flex h-full w-full flex-col items-center gap-3 py-3 text-slate-500 transition-colors hover:bg-slate-100"
+        className="flex h-full w-full flex-col items-center gap-2.5 pt-3 text-slate-500 transition-colors hover:bg-side-hover"
         onClick={() => dispatch({ type: 'expand' })}
         aria-label="흐름 칸 펼치기"
         data-tt={`흐름 칸 펼치기 — ${title}`}
       >
-        <span className="shrink-0 rounded-md bg-emerald-50 px-1.5 py-0.5 text-[11px] font-bold text-emerald-700">흐름</span>
+        <span className="shrink-0 text-[11px] font-bold text-slate-500">흐름</span>
         <span className={styles.vtitle} data-spine-title>
           {title}
         </span>
@@ -90,13 +92,13 @@ export const Stack = forwardRef<HTMLElement, StackProps>(function Stack({ ix, vi
   const hidden = items.slice(MAX_SEG)
   return (
     <m.nav ref={ref} {...motionProps(side === 'left' ? -1 : 1, z)} className={styles.card} aria-label={`${side === 'left' ? '앞쪽' : '뒤쪽'} 연관 탭 (위가 가까운 글)`} data-stack={side}>
-      <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
+      <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* 띠 사이를 옮겨 가는 탭은 layoutId로 미끄러지기만 — 나가는 쪽을 페이드로 남기면 옮겨 간 쪽과 겹쳐 보인다 */}
         {shown.map((it) => (
           <m.div
             key={it.id}
             layoutId={`tab:${it.id}`}
-            transition={SPRING_SNAPPY}
+            transition={QUICK}
             className={styles.seg}
             data-seg={it.id}
             data-cur={it.cur || undefined}
@@ -137,7 +139,7 @@ function More({ items, side, title, close, dispatch }: { items: Item[]; side: 'l
     <div className="relative shrink-0" ref={ref}>
       <button
         type="button"
-        className="grid h-10 w-full place-items-center rounded-b-2xl border-t border-slate-100 text-[12px] font-semibold tabular-nums text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800"
+        className="grid h-10 w-full place-items-center border-t border-line text-[12px] font-semibold tabular-nums text-slate-500 transition-colors hover:bg-side-hover hover:text-slate-900"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         data-tt={`더 먼 탭 ${items.length}개`}
@@ -150,12 +152,12 @@ function More({ items, side, title, close, dispatch }: { items: Item[]; side: 'l
           <m.div
             {...popIn}
             className={cn(
-              'absolute bottom-0 z-20 w-60 rounded-xl border border-slate-200 bg-white p-1.5 shadow-elevated',
-              side === 'left' ? 'left-[calc(100%+6px)] origin-bottom-left' : 'right-[calc(100%+6px)] origin-bottom-right',
+              'absolute bottom-0 z-20 w-60 rounded-lg border border-line bg-page p-1.5 shadow-pop',
+              side === 'left' ? 'left-[calc(100%+6px)]' : 'right-[calc(100%+6px)]',
             )}
           >
             {items.map((it) => (
-              <div key={it.id} className="group flex items-center rounded-md hover:bg-slate-100">
+              <div key={it.id} className="group flex items-center rounded-md hover:bg-hover">
                 <button
                   type="button"
                   className="min-w-0 flex-1 truncate rounded-md px-2.5 py-1.5 text-left text-[13px] text-slate-600"
