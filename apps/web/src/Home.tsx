@@ -2,10 +2,12 @@ import type { GraphIndex } from '@dumpster/schema'
 import { m } from 'framer-motion'
 import { Menu } from 'lucide-react'
 import { forwardRef } from 'react'
-import { paneVariants, QUICK } from './motion'
-import { styles as pane } from './Pane'
-import { SITE } from './site'
-import { cn, DocLink, md } from './ui'
+import { paneVariants, QUICK } from './ui/motion'
+import { styles as pane } from './pane/Pane'
+import { SITE } from './ui/site'
+import { DocLink } from './ui/DocLink'
+import { md } from './ui/format'
+import { cx } from '@dumpster/blocks'
 
 // 첫 화면 — 컬렉션 카드 + 최근 글 (design.md 11-24). 칸 하나에 담는다. 폰은 머리에 ☰ (목록 열기)
 export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: boolean; onMenu?: () => void; onOpen: (id: string) => void }>(function Home(
@@ -23,11 +25,11 @@ export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: 
       exit="exit"
       transition={QUICK}
       style={{ zIndex: z }}
-      className={cn(pane.card, pane.grow, !phone && pane.edge)}
+      className={cx(pane.card, pane.grow, !phone && pane.edge)}
       data-slot="home"
     >
       {onMenu && (
-        <div className={cn(pane.header, 'border-transparent')}>
+        <div className={cx(pane.header, 'border-transparent')}>
           <button type="button" className={pane.iconBtn} onClick={onMenu} aria-label="목록 열기" data-tt="목록 열기" data-menu>
             <Menu size={18} />
           </button>

@@ -1,6 +1,6 @@
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { useEffect, useRef, useState, type RefObject } from 'react'
-import type { Slot } from './view'
+import type { Slot } from '../core/view'
 
 // 칸 안 찾기 (11-27) — 펼친 글 하나에서만 찾는다. 브라우저 Ctrl+F는 두 칸·사이드바를 한꺼번에 뒤진다
 //   열기: 칸 머리 돋보기, 또는 지금 보는 칸에서 Ctrl/⌘+F (찾기 칸에 글자 커서가 있을 때 한 번 더 누르면 브라우저 찾기)

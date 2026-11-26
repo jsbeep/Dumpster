@@ -2,10 +2,11 @@ import type { GraphIndex, TreeRow } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, CornerUpLeft } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { descendants, type LinkMark } from './links'
-import { collapseY } from './motion'
-import { cn, DocLink } from './ui'
-import { activeOf, type View } from './view'
+import { descendants, type LinkMark } from '../core/links'
+import { collapseY } from '../ui/motion'
+import { DocLink } from '../ui/DocLink'
+import { cx } from '@dumpster/blocks'
+import { activeOf, type View } from '../core/view'
 
 // 컬렉션 트리 한 개 (design.md §3 "트리 표시") — 행 모양은 mongolive 사이드바 트리(DatabaseTree)
 //   점 모양 = 글 종류 (일반 / 분기점 / 매니페스트), 칠·고리 = 어느 칸에 열려 있나 (11-27 초록 → 무채색 강조색)
@@ -21,7 +22,7 @@ const styles = {
   rowSel: 'bg-selected [--dot-bg:rgb(var(--c-selected))]',
   rowHl: 'ring-[1.5px] ring-inset ring-accent-400',
   link: 'flex min-w-0 flex-1 items-stretch self-stretch pl-1',
-  // 글자색·굵기는 셋 중 하나만 (cn은 겹치는 클래스를 정리하지 않는다 — 겹치면 CSS 순서로 엉뚱한 게 이김)
+  // 글자색·굵기는 셋 중 하나만 (cx는 겹치는 클래스를 정리하지 않는다 — 겹치면 CSS 순서로 엉뚱한 게 이김)
   title: 'min-w-0 flex-1 self-center truncate px-1.5',
   titleIdle: 'text-slate-600',
   titleSel: 'font-bold text-slate-900',
@@ -51,7 +52,7 @@ const dot = {
   open: 'shadow-[0_0_0_1.5px_var(--dot-bg),0_0_0_3px_rgb(var(--c-slate-400))]', // 고리는 회색 (11-27)
 }
 export const dotClass = (shape: DotShape, state: DotState) =>
-  cn(dot.base, shape === 'man' ? dot.square : dot.round, state === 'sel' || state === 'act' ? dot.sel : dot[shape], (state === 'act' || state === 'open') && dot.open)
+  cx(dot.base, shape === 'man' ? dot.square : dot.round, state === 'sel' || state === 'act' ? dot.sel : dot[shape], (state === 'act' || state === 'open') && dot.open)
 
 interface Props {
   ix: GraphIndex
@@ -94,7 +95,7 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
     return (
       <m.div key={r.docId} {...collapseY} className="overflow-hidden">
         <div
-          className={cn(styles.row, isSel ? styles.rowSel : styles.rowIdle, isHl && styles.rowHl)}
+          className={cx(styles.row, isSel ? styles.rowSel : styles.rowIdle, isHl && styles.rowHl)}
           data-row={r.docId}
           data-sel={isSel || undefined}
           data-act={isAct || undefined}
@@ -104,22 +105,22 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
             <span className="flex shrink-0">
               {r.guides.map((g, i) => (
                 <span key={i} className={styles.cell}>
-                  {g && <span className={cn(styles.v, 'inset-y-0')} />}
+                  {g && <span className={cx(styles.v, 'inset-y-0')} />}
                 </span>
               ))}
               {r.branch !== 'none' && (
                 <span className={styles.cell}>
-                  <span className={cn(styles.v, 'top-0', r.branch === 'mid' ? 'bottom-0' : 'h-1/2')} />
-                  <span className={cn(styles.h, 'left-[7px] right-0')} />
+                  <span className={cx(styles.v, 'top-0', r.branch === 'mid' ? 'bottom-0' : 'h-1/2')} />
+                  <span className={cx(styles.h, 'left-[7px] right-0')} />
                 </span>
               )}
               <span className={styles.cell} data-legend={`${shape} ${state}`.trim()} data-tt-align="left">
-                {r.branch !== 'none' && <span className={cn(styles.h, 'left-0 w-2')} />}
-                {(up || down) && <span className={cn(styles.v, up && down ? 'inset-y-0' : up ? 'top-0 h-1/2' : 'bottom-0 top-1/2')} />}
+                {r.branch !== 'none' && <span className={cx(styles.h, 'left-0 w-2')} />}
+                {(up || down) && <span className={cx(styles.v, up && down ? 'inset-y-0' : up ? 'top-0 h-1/2' : 'bottom-0 top-1/2')} />}
                 <span data-dot={isSel || isAct ? 'sel' : inTabs.has(r.docId) ? 'open' : ''} className={dotClass(shape, state)} />
               </span>
             </span>
-            <span className={cn(styles.title, isSel ? styles.titleSel : isAct ? styles.titleAct : styles.titleIdle)} data-row-title>
+            <span className={cx(styles.title, isSel ? styles.titleSel : isAct ? styles.titleAct : styles.titleIdle)} data-row-title>
               {d.title}
             </span>
           </DocLink>
@@ -211,7 +212,7 @@ export function DotLegend({ on }: { on: string[] }) {
         <div key={g.group}>
           <p className="mb-0.5 text-[10.5px] font-semibold text-slate-400">{g.group}</p>
           {g.rows.map((r) => (
-            <p key={r.key} className={cn('flex h-6 items-center gap-1.5 whitespace-nowrap text-[12px]', on.includes(r.key) ? 'font-semibold text-slate-900' : 'text-slate-500')} data-on={on.includes(r.key) || undefined}>
+            <p key={r.key} className={cx('flex h-6 items-center gap-1.5 whitespace-nowrap text-[12px]', on.includes(r.key) ? 'font-semibold text-slate-900' : 'text-slate-500')} data-on={on.includes(r.key) || undefined}>
               <span className="relative grid h-4 w-4 shrink-0 place-items-center">{r.icon}</span>
               {r.label}
             </p>

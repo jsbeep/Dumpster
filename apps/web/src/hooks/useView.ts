@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import type { Store } from './data'
-import { hashOf, parseHash } from './route'
+import type { Store } from '../core/data'
+import { hashOf, parseHash } from '../core/route'
 import type { GraphIndex } from '@dumpster/schema'
-import { activeOf, isView, reduce, routeOf, viewOfRoute, type Action, type Slot, type View } from './view'
+import { activeOf, isView, reduce, routeOf, viewOfRoute, type Action, type Slot, type View } from '../core/view'
 
 // 칸 상태 훅 — reduce(순수 함수) 결과를 화면·브라우저 기록에 옮긴다 (design.md §3 "칸")
 //   view : 기록에 들어가는 칸 상태 (history.state.view, 주소엔 흐름 글 + 펼친 탭만)

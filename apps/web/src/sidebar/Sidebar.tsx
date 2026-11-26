@@ -19,15 +19,17 @@ import {
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from 'react'
-import { linkMarks } from './links'
-import { searchDocs } from './search'
-import { SITE } from './site'
-import { collapseY, QUICK } from './motion'
-import { isDark, onSystemTheme, toggleTheme } from './theme'
+import { linkMarks } from '../core/links'
+import { searchDocs } from '../core/search'
+import { SITE } from '../ui/site'
+import { collapseY, QUICK } from '../ui/motion'
+import { isDark, onSystemTheme, toggleTheme } from '../ui/theme'
 import { Tree } from './Tree'
-import { cn, DocLink, md } from './ui'
+import { DocLink } from '../ui/DocLink'
+import { md } from '../ui/format'
+import { cx } from '@dumpster/blocks'
 import { FULL_DEFAULT, RAIL_WIDTH, clampFullWidth, snapMode, type SidebarMode, type SidebarState } from './useSidebar'
-import type { View } from './view'
+import type { View } from '../core/view'
 
 // 왼쪽 사이드바 — mongolive components/layout/Sidebar.tsx의 모양·동작을 그대로 잇는다
 //   세 단계(useSidebar): 완전 접힘 / 아이콘 레일 / 전체
@@ -204,7 +206,7 @@ function FullContent(
   if (searching) {
     body = hits.length ? (
       hits.map(({ doc, alias }) => (
-        <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id)} className={cn(styles.item, view.main === doc.id ? styles.itemOn : styles.itemIdle)} data-hit>
+        <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id)} className={cx(styles.item, view.main === doc.id ? styles.itemOn : styles.itemIdle)} data-hit>
           <span className={styles.itemTitle}>
             <Marked text={doc.title} query={list.query} />
           </span>
@@ -231,7 +233,7 @@ function FullContent(
           <div className={styles.collRow}>
             <button type="button" className="flex min-w-0 flex-1 items-center gap-1.5 self-stretch pl-0.5 text-left" onClick={() => list.setOnly(null)} data-tt="모든 컬렉션 보기">
               <ChevronLeft size={14} className="ml-1 shrink-0 text-slate-400" aria-hidden />
-              <span className={cn(styles.collLabel, 'text-slate-900')} data-coll-title>
+              <span className={cx(styles.collLabel, 'text-slate-900')} data-coll-title>
                 {k.title}
               </span>
             </button>
@@ -258,12 +260,12 @@ function FullContent(
                 onClick={() => list.toggleOpen(c.id)}
                 aria-expanded={isOpen}
               >
-                <ChevronDown size={14} className={cn('ml-1 shrink-0 text-slate-400 transition-transform', !isOpen && '-rotate-90')} aria-hidden />
-                <span className={cn(styles.collLabel, mainCid === c.id ? 'text-slate-900' : 'text-slate-600')} data-coll-title>
+                <ChevronDown size={14} className={cx('ml-1 shrink-0 text-slate-400 transition-transform', !isOpen && '-rotate-90')} aria-hidden />
+                <span className={cx(styles.collLabel, mainCid === c.id ? 'text-slate-900' : 'text-slate-600')} data-coll-title>
                   {c.title}
                 </span>
               </button>
-              <span className={cn(styles.count, 'group-hover:hidden group-focus-within:hidden')}>{count(c.id)}</span>
+              <span className={cx(styles.count, 'group-hover:hidden group-focus-within:hidden')}>{count(c.id)}</span>
               <button
                 type="button"
                 className={styles.rowAction}
@@ -309,7 +311,7 @@ function FullContent(
         <input
           ref={searchRef}
           type="search"
-          className={cn(styles.search, '[&::-webkit-search-cancel-button]:hidden')}
+          className={cx(styles.search, '[&::-webkit-search-cancel-button]:hidden')}
           placeholder="제목 찾기"
           aria-label="제목 찾기"
           value={list.query}
@@ -344,7 +346,7 @@ function FullContent(
             key={tab}
             type="button"
             aria-pressed={!searching && list.tab === tab}
-            className={cn(styles.segBtn, !searching && list.tab === tab ? styles.segOn : styles.segIdle)}
+            className={cx(styles.segBtn, !searching && list.tab === tab ? styles.segOn : styles.segIdle)}
             onClick={() => {
               list.setQuery('')
               list.setTab(tab)
@@ -368,7 +370,7 @@ function RailContent({ tab, onExpand, onHide, onSearch, onTab }: { tab: SideTab;
       <div className={styles.brandRail}>
         <Logo hoverIcon={PanelLeftOpen} label="사이드바 펼치기" onClick={onExpand} />
       </div>
-      <nav className={cn(styles.railList, 'pt-3')} aria-label="목록 보기">
+      <nav className={cx(styles.railList, 'pt-3')} aria-label="목록 보기">
         <button type="button" className={styles.railBtn} onClick={onSearch} aria-label="제목 찾기" data-tt="제목 찾기">
           <Search size={16} />
         </button>
@@ -379,7 +381,7 @@ function RailContent({ tab, onExpand, onHide, onSearch, onTab }: { tab: SideTab;
         ))}
       </nav>
       <div className="flex-1" />
-      <div className={cn(styles.railList, 'pb-3')}>
+      <div className={cx(styles.railList, 'pb-3')}>
         <ThemeToggle className={styles.railBtn} />
         <div className="my-1 h-px w-6 bg-line" />
         <button type="button" className={styles.railBtn} onClick={onHide} aria-label="사이드바 숨기기" data-tt="사이드바 숨기기 — 왼쪽 끝에서 다시 꺼낸다">
@@ -398,7 +400,7 @@ function Recent({ ix, main, onOpen }: { ix: GraphIndex; main: string | null; onO
   return (
     <>
       {list.map((d) => (
-        <DocLink key={d.id} id={d.id} onGo={() => onOpen(d.id)} className={cn(styles.item, main === d.id ? styles.itemOn : styles.itemIdle)} data-recent>
+        <DocLink key={d.id} id={d.id} onGo={() => onOpen(d.id)} className={cx(styles.item, main === d.id ? styles.itemOn : styles.itemIdle)} data-recent>
           <span className={styles.itemTitle}>{d.title}</span>
           <span className={styles.itemMeta}>
             <span className="truncate">{ix.collectionsById.get(d.collectionId)?.title}</span>
@@ -422,7 +424,7 @@ function Tags(p: { ix: GraphIndex; main: string | null; tag: string | null; setT
     <>
       <div className="flex flex-wrap gap-1.5 px-1 pb-1 pt-1.5">
         {tags.map(([t, n]) => (
-          <button key={t} type="button" className={cn(styles.tag, tag === t ? styles.tagOn : styles.tagIdle)} aria-pressed={tag === t} onClick={() => p.setTag(tag === t ? null : t)}>
+          <button key={t} type="button" className={cx(styles.tag, tag === t ? styles.tagOn : styles.tagIdle)} aria-pressed={tag === t} onClick={() => p.setTag(tag === t ? null : t)}>
             #{t}
             <span className="ml-1 tabular-nums text-slate-400">{n}</span>
           </button>
@@ -432,7 +434,7 @@ function Tags(p: { ix: GraphIndex; main: string | null; tag: string | null; setT
         <>
           <p className={styles.sectionHead}>#{tag}</p>
           {list.map((d) => (
-            <DocLink key={d.id} id={d.id} onGo={() => p.onOpen(d.id)} className={cn(styles.item, p.main === d.id ? styles.itemOn : styles.itemIdle)}>
+            <DocLink key={d.id} id={d.id} onGo={() => p.onOpen(d.id)} className={cx(styles.item, p.main === d.id ? styles.itemOn : styles.itemIdle)}>
               <span className={styles.itemTitle}>{d.title}</span>
               <span className={styles.itemMeta}>{ix.collectionsById.get(d.collectionId)?.title}</span>
             </DocLink>

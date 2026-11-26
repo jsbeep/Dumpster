@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest'
 // 빌더를 상대경로로 바로 부른다 (테스트 전용). 짜가 볼트로 진짜 그래프를 만들어서
 // 시나리오 표에 적힌 링크·이전/다음 글이 데이터에 정말 있는지도 같이 본다
 import { buildGraph } from '../../builder/src/build'
-import { hashOf, parseHash } from '../src/route'
-import { HOME, activeOf, isView, reduce, routeOf, viewOfRoute, type Action, type Result, type View } from '../src/view'
+import { hashOf, parseHash } from '../src/core/route'
+import { HOME, activeOf, isView, reduce, routeOf, viewOfRoute, type Action, type Result, type View } from '../src/core/view'
 
 const vaultDir = fileURLToPath(new URL('../../../fixtures/vault', import.meta.url))
 const FIXED = { created: '2026-11-24T12:00:00+09:00', updated: '2026-11-24T12:00:00+09:00' }

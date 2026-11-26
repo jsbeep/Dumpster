@@ -2,9 +2,9 @@ import type { GraphIndex } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { Link2, PanelRightOpen, X } from 'lucide-react'
 import { forwardRef, useEffect, useRef, useState, type ReactElement } from 'react'
-import { paneVariants, popIn, QUICK } from './motion'
-import { cn } from './ui'
-import type { Action, View } from './view'
+import { paneVariants, popIn, QUICK } from './ui/motion'
+import { cx } from '@dumpster/blocks'
+import type { Action, View } from './core/view'
 
 // 띠 (design.md §3 "칸") — 46px 세로 줄, 사이드바 바탕색. 왼쪽 1px 선으로 이웃과 나뉜다 (11-27 평평한 판)
 //   FlowSpine: 접힌 흐름 칸 — 누르면 펼침
@@ -39,7 +39,7 @@ const motionProps = (dir: number, z: number) => ({
 
 export const FlowSpine = forwardRef<HTMLElement, { title: string; z: number; dispatch: (a: Action) => void }>(function FlowSpine({ title, z, dispatch }, ref) {
   return (
-    <m.section ref={ref} {...motionProps(-1, z)} className={cn(styles.card, 'overflow-hidden')} data-slot="main" data-spine>
+    <m.section ref={ref} {...motionProps(-1, z)} className={cx(styles.card, 'overflow-hidden')} data-slot="main" data-spine>
       <button
         type="button"
         className="flex h-full w-full flex-col items-center gap-2.5 pt-3 text-slate-500 transition-colors hover:bg-side-hover"
@@ -105,7 +105,7 @@ export const Stack = forwardRef<HTMLElement, StackProps>(function Stack({ ix, vi
           >
             <button
               type="button"
-              className={cn(styles.segBtn, it.cur ? styles.segCur : styles.segIdle)}
+              className={cx(styles.segBtn, it.cur ? styles.segCur : styles.segIdle)}
               data-hl={it.id}
               onClick={() => dispatch(it.cur ? { type: 'expand' } : { type: 'pick', index: it.i })}
               data-tt={`${title(it.id)}${it.cur ? ' — 펼치기' : ''}`}
@@ -151,7 +151,7 @@ function More({ items, side, title, close, dispatch }: { items: Item[]; side: 'l
         {open && (
           <m.div
             {...popIn}
-            className={cn(
+            className={cx(
               'absolute bottom-0 z-20 w-60 rounded-lg border border-line bg-page p-1.5 shadow-pop',
               side === 'left' ? 'left-[calc(100%+6px)]' : 'right-[calc(100%+6px)]',
             )}

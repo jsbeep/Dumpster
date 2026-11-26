@@ -38,7 +38,7 @@ body {
   scrollbar-color: var(--scrollbar) transparent;
 }
 
-/* 칸 안 찾기 (Find.tsx) — CSS Custom Highlight API. 칸마다 이름이 따로라 두 칸을 동시에 찾아도 안 섞인다 */
+/* 칸 안 찾기 (pane/Find.tsx) — CSS Custom Highlight API. 칸마다 이름이 따로라 두 칸을 동시에 찾아도 안 섞인다 */
 ::highlight(find-main),
 ::highlight(find-rel) {
   background-color: rgb(var(--c-amber-200) / 0.75);

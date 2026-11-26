@@ -2,8 +2,8 @@ import { buildGraphIndex } from '@dumpster/schema'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { buildGraph } from '../../builder/src/build'
-import { backlinks, branchInfo, descendants, linkMarks, outLinks, seeAlso } from '../src/links'
-import { searchDocs } from '../src/search'
+import { backlinks, branchInfo, descendants, linkMarks, outLinks, seeAlso } from '../src/core/links'
+import { searchDocs } from '../src/core/search'
 
 // 글 끝 목록·트리 ↙/↗·갈래 카드 계산 — 짜가 볼트 그래프 그대로
 const vaultDir = fileURLToPath(new URL('../../../fixtures/vault', import.meta.url))

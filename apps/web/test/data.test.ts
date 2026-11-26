@@ -1,7 +1,7 @@
 import { SCHEMA_VERSION, type Doc, type Graph } from '@dumpster/schema'
 import { describe, expect, it } from 'vitest'
-import { createStore, loadStore } from '../src/data'
-import { hashOf, parseHash } from '../src/route'
+import { createStore, loadStore } from '../src/core/data'
+import { hashOf, parseHash } from '../src/core/route'
 
 const OID = '6aeb0b8091f37a98e7007350'
 

@@ -1,17 +1,17 @@
 import { AnimatePresence, LayoutGroup, LazyMotion, MotionConfig, domMax, m } from 'framer-motion'
 import { useCallback, useEffect, useState, type MouseEvent, type PointerEvent } from 'react'
-import { loadStore, type Store } from './data'
+import { loadStore, type Store } from './core/data'
 import { Home } from './Home'
-import { Pane, type Zoom } from './Pane'
-import { parseHash } from './route'
-import { Sidebar, type RevealRequest } from './Sidebar'
+import { Pane, type Zoom } from './pane/Pane'
+import { parseHash } from './core/route'
+import { Sidebar, type RevealRequest } from './sidebar/Sidebar'
 import { FlowSpine, Stack } from './Strips'
-import { TooltipLayer } from './TooltipLayer'
-import { FAST, QUICK } from './motion'
-import { cn } from './ui'
-import { useSidebar } from './useSidebar'
-import { useView } from './useView'
-import { activeOf } from './view'
+import { TooltipLayer } from './ui/TooltipLayer'
+import { FAST, QUICK } from './ui/motion'
+import { cx } from '@dumpster/blocks'
+import { useSidebar } from './sidebar/useSidebar'
+import { useView } from './hooks/useView'
+import { activeOf } from './core/view'
 
 // 탐색기 화면 = 사이드바 + 흐름 칸 + [왼쪽 띠] 연관 칸 [오른쪽 띠] (design.md §3 "칸")
 // 11-27 평평한 판: 바탕 그라데이션·카드·틈 없이 사이드바 | 칸 | 띠 | 칸을 1px 선으로 붙인다 (선 = 각 칸·띠의 왼쪽 테두리)
@@ -31,7 +31,7 @@ export function App() {
           <Explorer store={store} />
         ) : (
           <div className="flex h-full items-center justify-center font-sans">
-            <p className={cn('text-[14px]', error ? 'text-rose-700' : 'text-slate-400')}>{error ?? '불러오는 중…'}</p>
+            <p className={cx('text-[14px]', error ? 'text-rose-700' : 'text-slate-400')}>{error ?? '불러오는 중…'}</p>
           </div>
         )}
         <TooltipLayer />

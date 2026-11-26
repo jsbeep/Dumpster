@@ -1,13 +1,6 @@
 import { docHref } from '@dumpster/blocks'
 import type { AnchorHTMLAttributes, MouseEvent, ReactNode } from 'react'
 
-// 여러 화면 조각이 같이 쓰는 작은 것들
-
-export const cn = (...xs: (string | false | null | undefined)[]) => xs.filter(Boolean).join(' ')
-
-export const ymd = (iso: string) => iso.slice(0, 10)
-export const md = (iso: string) => iso.slice(5, 10)
-
 // 새 탭·새 창으로 열려는 클릭(Ctrl/⌘/Shift/가운데 버튼)은 브라우저에 맡긴다 — 블록 렌더러 링크와 같은 규칙
 const plainClick = (e: MouseEvent) => e.button === 0 && !e.metaKey && !e.ctrlKey && !e.shiftKey && !e.altKey
 

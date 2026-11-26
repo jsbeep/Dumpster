@@ -19,14 +19,16 @@ import {
   X,
 } from 'lucide-react'
 import { forwardRef, useCallback, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react'
-import type { Store } from './data'
+import type { Store } from '../core/data'
 import { FindBar } from './Find'
-import { backlinks, branchInfo, outLinks, sameCollection, seeAlso } from './links'
-import { paneVariants, popIn, QUICK } from './motion'
-import { PresenceBoundary } from './PresenceBoundary'
-import { cn, DocLink, ymd } from './ui'
-import type { PendingHeading, Pulse } from './useView'
-import { activeOf, type Action, type Slot, type View } from './view'
+import { backlinks, branchInfo, outLinks, sameCollection, seeAlso } from '../core/links'
+import { paneVariants, popIn, QUICK } from '../ui/motion'
+import { PresenceBoundary } from '../ui/PresenceBoundary'
+import { DocLink } from '../ui/DocLink'
+import { ymd } from '../ui/format'
+import { cx } from '@dumpster/blocks'
+import type { PendingHeading, Pulse } from '../hooks/useView'
+import { activeOf, type Action, type Slot, type View } from '../core/view'
 
 // 칸 하나 — 흐름 칸이든 연관 칸이든 같은 모양 (design.md §3 "칸"). 11-27 평평한 판: 카드 없이 왼쪽 1px 선으로 이웃과 나뉜다
 //   머리: [☰ 폰 목록] [‹ 폰 뒤로] 흐름|연관 n/m [바로가기] (스크롤하면 제목 + 밑줄) [찾기] [모두 닫기] [접기] [×]
@@ -294,7 +296,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   const title = doc?.title ?? meta?.title ?? ''
 
   const header = (
-    <div className={cn(styles.header, spy.title ? 'border-line' : 'border-transparent')}>
+    <div className={cx(styles.header, spy.title ? 'border-line' : 'border-transparent')}>
       {p.onMenu && (
         <button type="button" className={styles.iconBtn} onClick={p.onMenu} aria-label="목록 열기" data-tt="목록 열기" data-menu>
           <Menu size={18} />
@@ -307,7 +309,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
         </button>
       )}
       {hasRel && !p.phone && (
-        <span className={cn(styles.lane, p.focused ? styles.laneFocus : styles.laneIdle)} data-lane>
+        <span className={cx(styles.lane, p.focused ? styles.laneFocus : styles.laneIdle)} data-lane>
           {slot === 'main' ? '흐름' : '연관'}
           {slot === 'rel' && n > 1 && <span className="ml-1 font-medium tabular-nums">{`${view.active + 1}/${n}`}</span>}
         </span>
@@ -381,7 +383,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
     page = (
       <article
         ref={articleRef}
-        className={cn(styles.page, '[&_figure_img]:cursor-zoom-in')}
+        className={cx(styles.page, '[&_figure_img]:cursor-zoom-in')}
         onClick={(e) => {
           // 본문 그림 누르면 크게 (북마크 카드 그림은 링크라 제외)
           const img = (e.target as HTMLElement).closest('img')
@@ -445,7 +447,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
       transition={QUICK}
       layout
       style={{ zIndex: p.z }}
-      className={cn(styles.card, p.half ? styles.half : styles.grow, !p.phone && styles.edge)}
+      className={cx(styles.card, p.half ? styles.half : styles.grow, !p.phone && styles.edge)}
       data-slot={slot}
       data-focus={(p.focused && hasRel) || undefined}
       aria-label={`${slot === 'main' ? '흐름' : '연관'}: ${title}`}
@@ -514,7 +516,7 @@ function Toc({ heads, current, onGo }: { heads: BlockOf<'heading'>[]; current: s
     >
       <button type="button" className="flex flex-col items-end gap-[7px] rounded-lg px-1.5 py-2" onClick={() => setOpen((o) => !o)} aria-label="목차" aria-expanded={open} data-toc-bars>
         {heads.map((h) => (
-          <i key={h.anchor} className={cn('block h-0.5 rounded-sm', h.anchor === current ? 'bg-slate-700' : 'bg-slate-300')} style={{ width: TOC_W[h.level - minLv] }} />
+          <i key={h.anchor} className={cx('block h-0.5 rounded-sm', h.anchor === current ? 'bg-slate-700' : 'bg-slate-300')} style={{ width: TOC_W[h.level - minLv] }} />
         ))}
       </button>
       <AnimatePresence>
@@ -528,7 +530,7 @@ function Toc({ heads, current, onGo }: { heads: BlockOf<'heading'>[]; current: s
               <button
                 key={h.anchor}
                 type="button"
-                className={cn(
+                className={cx(
                   'block w-full rounded-md px-2.5 py-1.5 text-left text-[13px] leading-snug transition-colors hover:bg-hover hover:text-slate-900',
                   h.anchor === current ? 'font-semibold text-slate-900' : 'text-slate-500',
                 )}
@@ -570,7 +572,7 @@ function Pager({ ix, doc, slot, dispatch }: { ix: GraphIndex; doc: Doc; slot: Sl
   if (nexts.length === 1) {
     const nx = nexts[0]
     right = (
-      <DocLink id={nx.id} onGo={step(nx.id)} className={cn(pg.card, 'items-end text-right')} data-pg="next">
+      <DocLink id={nx.id} onGo={step(nx.id)} className={cx(pg.card, 'items-end text-right')} data-pg="next">
         <span className={pg.k}>
           다음
           <ArrowRight size={14} aria-hidden />
@@ -582,7 +584,7 @@ function Pager({ ix, doc, slot, dispatch }: { ix: GraphIndex; doc: Doc; slot: Sl
   } else if (nexts.length > 1) {
     right = (
       <div className="flex min-w-0 flex-col gap-0.5 rounded-lg border border-line px-2 pb-2 pt-2.5">
-        <span className={cn(pg.k, 'justify-end px-2 pb-1')}>
+        <span className={cx(pg.k, 'justify-end px-2 pb-1')}>
           다음 · 갈래 {nexts.length}
           <GitBranch size={14} aria-hidden />
         </span>
@@ -660,8 +662,8 @@ function Links({ ix, doc, slot, view, dispatch }: { ix: GraphIndex; doc: Doc; sl
     if (!d) return null
     const w = where(id)
     return (
-      <DocLink key={id} id={id} onGo={() => dispatch({ type: 'link', id })} className={cn(rr.row, rr.live)} data-rr>
-        <span className={cn(rr.t, 'text-slate-900')}>{d.title}</span>
+      <DocLink key={id} id={id} onGo={() => dispatch({ type: 'link', id })} className={cx(rr.row, rr.live)} data-rr>
+        <span className={cx(rr.t, 'text-slate-900')}>{d.title}</span>
         {w && <span className="whitespace-nowrap text-[12px] font-medium text-slate-500">{w}</span>}
         {!sameCollection(ix, id, doc.id) && <span className={rr.m}>{ix.collectionsById.get(d.collectionId)?.title}</span>}
       </DocLink>
@@ -671,8 +673,8 @@ function Links({ ix, doc, slot, view, dispatch }: { ix: GraphIndex; doc: Doc; sl
     e.target && ix.docsById.has(e.target) ? (
       row(e.target)
     ) : (
-      <span key={`?${e.targetLabel}`} className={cn(rr.row, rr.dead)} data-tt="없는 글" data-dead>
-        <span className={cn(rr.t, 'text-slate-400')}>{e.targetLabel}</span>
+      <span key={`?${e.targetLabel}`} className={cx(rr.row, rr.dead)} data-tt="없는 글" data-dead>
+        <span className={cx(rr.t, 'text-slate-400')}>{e.targetLabel}</span>
         <span className={rr.m}>없는 글</span>
       </span>
     )
