@@ -18,11 +18,14 @@ const styles = {
   card: 'relative flex w-11 shrink-0 flex-col rounded-2xl border border-slate-200/80 bg-white/70 shadow-panel',
   vtitle: 'min-h-0 shrink overflow-hidden text-ellipsis whitespace-nowrap text-[13px] font-semibold text-slate-700 [writing-mode:vertical-rl]',
   seg: 'group flex max-h-60 min-h-0 flex-1 basis-0 flex-col border-b border-slate-100 last:border-b-0',
-  segBtn: 'flex min-h-0 flex-1 flex-col items-center gap-2.5 pb-1.5 pt-3 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-800',
+  segBtn: 'flex min-h-0 flex-1 flex-col items-center gap-2.5 pb-1.5 pt-3 transition-colors hover:bg-slate-100 hover:text-slate-800',
+  segIdle: 'text-slate-400',
+  segCur: 'text-emerald-700',
   close: 'grid h-7 shrink-0 place-items-center text-slate-400 opacity-50 transition-colors hover:bg-slate-100 hover:text-rose-600 group-hover:opacity-100',
 } as const
 
-const motionProps = (dir: number) => ({
+const motionProps = (dir: number, z: number) => ({
+  style: { zIndex: z, borderRadius: 16 },
   custom: dir,
   variants: paneVariants,
   initial: 'enter',
@@ -32,9 +35,9 @@ const motionProps = (dir: number) => ({
   layout: true,
 })
 
-export const FlowSpine = forwardRef<HTMLElement, { title: string; dispatch: (a: Action) => void }>(function FlowSpine({ title, dispatch }, ref) {
+export const FlowSpine = forwardRef<HTMLElement, { title: string; z: number; dispatch: (a: Action) => void }>(function FlowSpine({ title, z, dispatch }, ref) {
   return (
-    <m.section ref={ref} {...motionProps(-1)} className={cn(styles.card, 'overflow-hidden')} data-slot="main" data-spine>
+    <m.section ref={ref} {...motionProps(-1, z)} className={cn(styles.card, 'overflow-hidden')} data-slot="main" data-spine>
       <button
         type="button"
         className="flex h-full w-full flex-col items-center gap-3 py-3 text-slate-500 transition-colors hover:bg-slate-100"
@@ -61,11 +64,12 @@ interface StackProps {
   ix: GraphIndex
   view: View
   side: 'left' | 'right'
+  z: number
   phone: boolean
   dispatch: (a: Action) => void
 }
 
-export const Stack = forwardRef<HTMLElement, StackProps>(function Stack({ ix, view, side, phone, dispatch }, ref) {
+export const Stack = forwardRef<HTMLElement, StackProps>(function Stack({ ix, view, side, z, phone, dispatch }, ref) {
   const { tabs, active } = view
   let items: Item[]
   if (side === 'left') {
@@ -85,37 +89,33 @@ export const Stack = forwardRef<HTMLElement, StackProps>(function Stack({ ix, vi
   const shown = items.slice(0, MAX_SEG)
   const hidden = items.slice(MAX_SEG)
   return (
-    <m.nav ref={ref} {...motionProps(side === 'left' ? -1 : 1)} className={styles.card} aria-label={`${side === 'left' ? '앞쪽' : '뒤쪽'} 연관 탭 (위가 가까운 글)`} data-stack={side}>
+    <m.nav ref={ref} {...motionProps(side === 'left' ? -1 : 1, z)} className={styles.card} aria-label={`${side === 'left' ? '앞쪽' : '뒤쪽'} 연관 탭 (위가 가까운 글)`} data-stack={side}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden rounded-2xl">
-        <AnimatePresence initial={false}>
-          {shown.map((it) => (
-            <m.div
-              key={it.id}
-              layoutId={`tab:${it.id}`}
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={SPRING_SNAPPY}
-              className={styles.seg}
-              data-seg={it.id}
-              data-cur={it.cur || undefined}
+        {/* 띠 사이를 옮겨 가는 탭은 layoutId로 미끄러지기만 — 나가는 쪽을 페이드로 남기면 옮겨 간 쪽과 겹쳐 보인다 */}
+        {shown.map((it) => (
+          <m.div
+            key={it.id}
+            layoutId={`tab:${it.id}`}
+            transition={SPRING_SNAPPY}
+            className={styles.seg}
+            data-seg={it.id}
+            data-cur={it.cur || undefined}
+          >
+            <button
+              type="button"
+              className={cn(styles.segBtn, it.cur ? styles.segCur : styles.segIdle)}
+              data-hl={it.id}
+              onClick={() => dispatch(it.cur ? { type: 'expand' } : { type: 'pick', index: it.i })}
+              data-tt={`${title(it.id)}${it.cur ? ' — 펼치기' : ''}`}
             >
-              <button
-                type="button"
-                className={cn(styles.segBtn, it.cur && 'text-emerald-700')}
-                data-hl={it.id}
-                onClick={() => dispatch(it.cur ? { type: 'expand' } : { type: 'pick', index: it.i })}
-                data-tt={`${title(it.id)}${it.cur ? ' — 펼치기' : ''}`}
-              >
-                {it.cur ? <PanelRightOpen size={14} className="shrink-0" /> : <Link2 size={14} className="shrink-0" />}
-                <span className={styles.vtitle} data-seg-title>
-                  {title(it.id)}
-                </span>
-              </button>
-              {close(it)}
-            </m.div>
+              {it.cur ? <PanelRightOpen size={14} className="shrink-0" /> : <Link2 size={14} className="shrink-0" />}
+              <span className={styles.vtitle} data-seg-title>
+                {title(it.id)}
+              </span>
+            </button>
+            {close(it)}
+          </m.div>
           ))}
-        </AnimatePresence>
       </div>
       {hidden.length > 0 && <More items={hidden} side={side} title={title} close={close} dispatch={dispatch} />}
     </m.nav>

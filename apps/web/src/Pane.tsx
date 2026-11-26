@@ -34,7 +34,8 @@ import { activeOf, type Action, type Slot, type View } from './view'
 export const styles = {
   card: 'relative flex min-w-0 flex-1 basis-0 flex-col overflow-hidden rounded-2xl border border-slate-200/80 bg-white shadow-panel @container',
   header: 'flex h-11 shrink-0 items-center gap-0.5 border-b border-slate-100 px-2',
-  lane: 'shrink-0 whitespace-nowrap px-1.5 text-[11.5px] font-semibold text-slate-400',
+  lane: 'shrink-0 whitespace-nowrap px-1.5 text-[11.5px] font-semibold',
+  laneIdle: 'text-slate-400',
   laneFocus: 'text-emerald-700',
   iconBtn: 'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700',
   textBtn: 'h-7 shrink-0 whitespace-nowrap rounded-md px-2 text-[12px] text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-700',
@@ -61,6 +62,7 @@ interface Props {
   docId: string
   view: View
   dir: number // 들어오는 방향 (motion custom)
+  z: number // 왼쪽 칸일수록 위 (mongolive 밀러 컬럼 99 - 순서) — 들어오는 칸이 흐름 칸 밑에서 빠져나온다
   phone: boolean
   focused: boolean // 지금 보는 칸 — 칸이 둘일 때 "흐름"/"연관" 글자가 초록
   flash: Pulse | null
@@ -156,7 +158,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
         </button>
       )}
       {hasRel && !p.phone && (
-        <span className={cn(styles.lane, p.focused && styles.laneFocus)} data-lane>
+        <span className={cn(styles.lane, p.focused ? styles.laneFocus : styles.laneIdle)} data-lane>
           {slot === 'main' ? '흐름' : '연관'}
           {slot === 'rel' && n > 1 && <span className="ml-1 font-medium tabular-nums">{`${view.active + 1}/${n}`}</span>}
         </span>
@@ -292,6 +294,8 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
       exit="exit"
       transition={SPRING_COLUMN}
       layout
+      // borderRadius를 style로 줘야 크기 애니메이션 중 둥근 모서리도 보정된다
+      style={{ zIndex: p.z, borderRadius: 16 }}
       className={styles.card}
       data-slot={slot}
       data-focus={(p.focused && hasRel) || undefined}
@@ -299,13 +303,17 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
     >
       {/* 안쪽 motion 요소가 칸의 퇴장을 붙잡지 않게 — 본문은 열린 뒤에 도착한다 (PresenceBoundary 설명) */}
       <PresenceBoundary>
-        {header}
-        <div className="relative flex min-h-0 flex-1">
-          <div className={styles.scroll} ref={scrollRef} onScroll={onScroll} data-scroll>
-            {page}
+        {/* 칸 크기가 바뀌는 동안(layout) 카드는 transform으로 늘고 준다 — 안쪽은 layout="position"이라
+            framer가 반대로 보정해서 글자가 늘어나 보이지 않는다. 안쪽은 바로 새 폭으로 그려지고 카드가 잘라 보여 준다 */}
+        <m.div layout="position" className="flex min-h-0 flex-1 flex-col">
+          {header}
+          <div className="relative flex min-h-0 flex-1">
+            <div className={styles.scroll} ref={scrollRef} onScroll={onScroll} data-scroll>
+              {page}
+            </div>
+            {heads.length >= 2 && <Toc heads={heads} current={spy.heading} onGo={scrollToAnchor} />}
           </div>
-          {heads.length >= 2 && <Toc heads={heads} current={spy.heading} onGo={scrollToAnchor} />}
-        </div>
+        </m.div>
         {p.flash?.slot === slot && (
           <m.div
             key={p.flash.n}
@@ -459,7 +467,7 @@ function Pager({ ix, doc, slot, dispatch }: { ix: GraphIndex; doc: Doc; slot: Sl
   }
 
   return (
-    <nav className="grid grid-cols-1 gap-3 @[470px]:grid-cols-2" aria-label="이전·다음 글">
+    <nav className="grid grid-cols-1 items-start gap-3 @[470px]:grid-cols-[repeat(2,minmax(0,360px))] @[470px]:justify-between" aria-label="이전·다음 글">
       {prev ? (
         <DocLink id={prev.id} onGo={step(prev.id)} className={pg.card} data-pg="prev">
           <span className={pg.k}>
@@ -478,8 +486,10 @@ function Pager({ ix, doc, slot, dispatch }: { ix: GraphIndex; doc: Doc; slot: Sl
 }
 
 const rr = {
-  row: 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5 transition-colors hover:bg-slate-100',
-  t: 'min-w-0 flex-1 truncate text-[14.5px] text-slate-900',
+  row: 'flex w-full items-center gap-2.5 rounded-lg px-2.5 py-1.5',
+  live: 'transition-colors hover:bg-slate-100',
+  dead: 'cursor-not-allowed',
+  t: 'min-w-0 flex-1 truncate text-[14.5px]',
   m: 'whitespace-nowrap text-[12px] text-slate-400',
 } as const
 
@@ -498,8 +508,8 @@ function Links({ ix, doc, slot, view, dispatch }: { ix: GraphIndex; doc: Doc; sl
     if (!d) return null
     const w = where(id)
     return (
-      <DocLink key={id} id={id} onGo={() => dispatch({ type: 'link', id })} className={rr.row} data-rr>
-        <span className={rr.t}>{d.title}</span>
+      <DocLink key={id} id={id} onGo={() => dispatch({ type: 'link', id })} className={cn(rr.row, rr.live)} data-rr>
+        <span className={cn(rr.t, 'text-slate-900')}>{d.title}</span>
         {w && <span className="whitespace-nowrap rounded-full bg-emerald-50 px-2 py-px text-[11.5px] text-emerald-700">{w}</span>}
         {!sameCollection(ix, id, doc.id) && <span className={rr.m}>{ix.collectionsById.get(d.collectionId)?.title}</span>}
       </DocLink>
@@ -509,7 +519,7 @@ function Links({ ix, doc, slot, view, dispatch }: { ix: GraphIndex; doc: Doc; sl
     e.target && ix.docsById.has(e.target) ? (
       row(e.target)
     ) : (
-      <span key={`?${e.targetLabel}`} className={cn(rr.row, 'cursor-not-allowed hover:bg-transparent')} data-tt="없는 글">
+      <span key={`?${e.targetLabel}`} className={cn(rr.row, rr.dead)} data-tt="없는 글" data-dead>
         <span className={cn(rr.t, 'text-slate-400')}>{e.targetLabel}</span>
         <span className={rr.m}>없는 글</span>
       </span>

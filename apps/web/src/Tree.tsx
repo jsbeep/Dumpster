@@ -18,18 +18,24 @@ const styles = {
   rowSel: 'bg-selected',
   rowHl: 'ring-[1.5px] ring-inset ring-sky-600',
   link: 'flex min-w-0 flex-1 items-stretch self-stretch pl-1',
-  title: 'min-w-0 flex-1 self-center truncate px-1.5 text-slate-600',
+  // 글자색·굵기는 셋 중 하나만 (cn은 겹치는 클래스를 정리하지 않는다 — 겹치면 CSS 순서로 엉뚱한 게 이김)
+  title: 'min-w-0 flex-1 self-center truncate px-1.5',
+  titleIdle: 'text-slate-600',
   titleSel: 'font-medium text-emerald-700',
   titleAct: 'font-semibold text-slate-900',
   cell: 'relative w-4 shrink-0',
   v: 'absolute left-[7px] border-l-[1.5px] border-slate-300', // 세로줄
   h: 'absolute top-[calc(50%-0.75px)] border-t-[1.5px] border-slate-300', // 가로줄
-  dot: 'absolute left-[3.25px] top-[calc(50%-4.75px)] z-[1] h-[9.5px] w-[9.5px] rounded-full border-2 border-slate-400 bg-white',
-  dotFork: 'border-slate-700',
-  dotMan: 'rounded-[3px] border-slate-700 bg-slate-700',
-  dotSel: 'border-emerald-600 bg-emerald-600',
-  // 탭에 있는 글 = 큰 초록 테두리 (사이드바 카드 바탕색 틈 + 초록 고리)
-  dotOpen: 'shadow-[0_0_0_2px_rgb(var(--c-white)),0_0_0_4px_rgb(var(--c-emerald-600))]',
+  // 점: 모양(원/둥근 네모) · 칠(속 빈/꽉 찬 초록/진회색) · 고리를 각각 하나씩만 고른다
+  dot: 'absolute left-[3.25px] top-[calc(50%-4.75px)] z-[1] h-[9.5px] w-[9.5px] border-2',
+  dotRound: 'rounded-full',
+  dotSquare: 'rounded-[3px]', // 매니페스트
+  fillIdle: 'border-slate-400 bg-white',
+  fillFork: 'border-slate-700 bg-white', // 분기점
+  fillMan: 'border-slate-700 bg-slate-700',
+  fillSel: 'border-emerald-600 bg-emerald-600', // 흐름 글 · 펼친 탭
+  // 탭에 있는 글 = 초록 고리 (사이드바 카드 바탕색 틈 1.5px + 고리 1.5px)
+  dotOpen: 'shadow-[0_0_0_1.5px_rgb(var(--c-white)),0_0_0_3px_rgb(var(--c-emerald-600))]',
   badge: 'shrink-0 whitespace-nowrap rounded-full bg-emerald-50 px-1.5 text-[11px] font-semibold text-emerald-700',
   mark: 'grid h-5 w-5 shrink-0 place-items-center rounded-md',
   markIn: 'bg-sky-50 text-sky-700',
@@ -101,18 +107,17 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
                 {r.branch !== 'none' && <span className={cn(styles.h, 'left-0 w-2')} />}
                 {(up || down) && <span className={cn(styles.v, up && down ? 'inset-y-0' : up ? 'top-0 h-1/2' : 'bottom-0 top-1/2')} />}
                 <span
-                  data-dot
+                  data-dot={isSel || isAct ? 'sel' : inTabs.has(r.docId) ? 'open' : ''}
                   className={cn(
                     styles.dot,
-                    r.forks > 1 && styles.dotFork,
-                    d.kind === 'manifest' && styles.dotMan,
-                    (isSel || isAct) && styles.dotSel,
+                    d.kind === 'manifest' ? styles.dotSquare : styles.dotRound,
+                    isSel || isAct ? styles.fillSel : d.kind === 'manifest' ? styles.fillMan : r.forks > 1 ? styles.fillFork : styles.fillIdle,
                     inTabs.has(r.docId) && styles.dotOpen,
                   )}
                 />
               </span>
             </span>
-            <span className={cn(styles.title, isSel ? styles.titleSel : isAct && styles.titleAct)} data-row-title>
+            <span className={cn(styles.title, isSel ? styles.titleSel : isAct ? styles.titleAct : styles.titleIdle)} data-row-title>
               {d.title}
             </span>
           </DocLink>

@@ -3,16 +3,17 @@ import { m } from 'framer-motion'
 import { forwardRef } from 'react'
 import { paneVariants, SPRING_COLUMN } from './motion'
 import { styles as pane } from './Pane'
+import { SITE } from './site'
 import { DocLink, md } from './ui'
 
 // 첫 화면 — 컬렉션 카드 + 최근 글 (design.md 11-24). 칸 카드 하나에 담는다
-export const Home = forwardRef<HTMLElement, { ix: GraphIndex; onOpen: (id: string) => void }>(function Home({ ix, onOpen }, ref) {
+export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; onOpen: (id: string) => void }>(function Home({ ix, z, onOpen }, ref) {
   const recent = [...ix.graph.docs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title, 'ko')).slice(0, 8)
   return (
-    <m.section ref={ref} custom={0} variants={paneVariants} initial="enter" animate="center" exit="exit" transition={SPRING_COLUMN} className={pane.card} data-slot="home">
+    <m.section ref={ref} custom={0} variants={paneVariants} initial="enter" animate="center" exit="exit" transition={SPRING_COLUMN} style={{ zIndex: z }} className={pane.card} data-slot="home">
       <div className={pane.scroll}>
         <article className={pane.page}>
-          <h1 className={`${pane.title} mt-8`}>Dumpster</h1>
+          <h1 className="mt-8 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 @[560px]:text-[28px]">{SITE.title}</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-slate-500">짬통에 던져 둔 글을 컬렉션별로 이어 읽는 곳.</p>
           <h2 className="mb-3 mt-9 text-[11px] font-semibold uppercase tracking-wider text-slate-400">컬렉션</h2>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">

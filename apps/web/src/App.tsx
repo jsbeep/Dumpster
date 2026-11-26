@@ -94,7 +94,9 @@ function Explorer({ store }: { store: Store }) {
   }, [zoom])
 
   // 칸을 누르면 그 칸이 지금 보는 칸 → 사이드바가 그 글의 컬렉션으로 (기록엔 안 쌓임)
+  // 글로 가는 링크·버튼은 빼고 — 누르면 바로 다른 글이 열려서 사이드바가 한 번 더 바뀐다 (다른 컬렉션이 펴졌다 다시 접힘)
   const onPanesDown = (e: PointerEvent) => {
+    if ((e.target as HTMLElement).closest('a[href^="#/d/"], [data-hl]')) return
     const pane = (e.target as HTMLElement).closest<HTMLElement>('[data-slot]')
     const s = pane?.dataset.slot
     if ((s === 'main' || s === 'rel') && pane!.dataset.spine === undefined) focusSlot(s)
@@ -105,6 +107,8 @@ function Explorer({ store }: { store: Store }) {
     setHover((h) => (h === id ? h : id))
   }
 
+  // 겹칠 때 위에 오는 순서: 왼쪽 칸일수록 위 (mongolive 밀러 컬럼 99 - 순서). 흐름 칸이 늘 맨 위
+  const Z = { main: 40, left: 30, rel: 20, right: 10 }
   const paneProps = { store, view, phone, flash, pending, dispatch, onReveal: revealDoc, onZoom: setZoom }
 
   return (
@@ -130,19 +134,19 @@ function Explorer({ store }: { store: Store }) {
             <div className="flex h-full w-full gap-3 overflow-hidden p-3" data-panes={hasRel ? 'two' : 'one'}>
               <AnimatePresence initial={false} mode="popLayout">
                 {!view.main ? (
-                  <Home key="home" ix={ix} onOpen={(id) => dispatch({ type: 'open', id })} />
+                  <Home key="home" ix={ix} z={Z.main} onOpen={(id) => dispatch({ type: 'open', id })} />
                 ) : (
                   [
                     coll === 'main' && hasRel ? (
-                      <FlowSpine key="spine" title={ix.docsById.get(view.main)?.title ?? '없는 글'} dispatch={dispatch} />
+                      <FlowSpine key="spine" z={Z.main} title={ix.docsById.get(view.main)?.title ?? '없는 글'} dispatch={dispatch} />
                     ) : phone && hasRel ? null : (
-                      <Pane key={`main:${view.main}`} slot="main" docId={view.main} dir={dir.main} focused={slot === 'main'} {...paneProps} />
+                      <Pane key={`main:${view.main}`} slot="main" docId={view.main} dir={dir.main} z={Z.main} focused={slot === 'main'} {...paneProps} />
                     ),
-                    leftTabs > 0 && <Stack key="stack-left" ix={ix} view={view} side="left" phone={phone} dispatch={dispatch} />,
+                    leftTabs > 0 && <Stack key="stack-left" ix={ix} view={view} side="left" z={Z.left} phone={phone} dispatch={dispatch} />,
                     hasRel && active && coll !== 'rel' && (
-                      <Pane key={`rel:${active}`} slot="rel" docId={active} dir={dir.rel} focused={slot === 'rel'} {...paneProps} />
+                      <Pane key={`rel:${active}`} slot="rel" docId={active} dir={dir.rel} z={Z.rel} focused={slot === 'rel'} {...paneProps} />
                     ),
-                    rightTabs > 0 && <Stack key="stack-right" ix={ix} view={view} side="right" phone={phone} dispatch={dispatch} />,
+                    rightTabs > 0 && <Stack key="stack-right" ix={ix} view={view} side="right" z={Z.right} phone={phone} dispatch={dispatch} />,
                   ]
                 )}
               </AnimatePresence>

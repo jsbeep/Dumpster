@@ -8,17 +8,20 @@ import {
   Clock,
   FolderTree,
   Hash,
-  House,
   Maximize2,
   Minimize2,
   Moon,
   PanelLeftClose,
   PanelLeftOpen,
+  Search,
   Sun,
+  X,
   type LucideIcon,
 } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent, type ReactNode, type RefObject } from 'react'
 import { linkMarks } from './links'
+import { searchDocs } from './search'
+import { SITE } from './site'
 import { collapseY, SPRING_SIDEBAR } from './motion'
 import { isDark, onSystemTheme, toggleTheme } from './theme'
 import { Tree } from './Tree'
@@ -28,10 +31,10 @@ import type { View } from './view'
 
 // 왼쪽 사이드바 — mongolive components/layout/Sidebar.tsx의 모양·동작을 그대로 잇는다
 //   세 단계(useSidebar): 완전 접힘 / 아이콘 레일 / 전체
-//   전체: [D 로고 + Dumpster] · 첫 화면·컬렉션·최근·태그 · ── · 목록(컬렉션 트리 / 최근 글 / 태그) · 맨 아래 테마
-//   레일: 아이콘만. 목록 아이콘을 누르면 그 목록으로 펼친다. 맨 아래 = 테마 · 완전히 접기
+//   전체: [로고(=접기) 헌옷수거함(=첫 화면)/jsbeep ☾] · 검색 · [컬렉션|최근|태그] · ── · 목록 (검색어가 있으면 찾은 글)
+//   레일: 아이콘만. 검색·목록 아이콘을 누르면 그걸로 펼친다. 맨 아래 = 테마 · 완전히 접기
 //   접힘: 화면 왼쪽 끝 당김 핸들 — 늘 얇게 보이고 마우스가 다가가면 커진다. 누르면 접기 전 단계로, 끌면 끄는 만큼
-//   로고 버튼: 평소엔 D, 올리면 무엇이 될지(전체 → 접기 아이콘, 레일 → 펼치기 아이콘)
+//   로고 버튼: 평소엔 '헌', 올리면 무엇이 될지(전체 → 접기 아이콘, 레일 → 펼치기 아이콘)
 //   너비: 오른쪽 틈을 끌면 너비에 따라 단계가 바뀐다. 더블클릭 = 기본 너비
 //   떠 있는 화면(좁은 창·두 칸)에선 레일까지만 붙고, 전체는 칸 위에 떠서 열린다(바깥 누르기·Esc·글 고르기 → 레일)
 // 기록 밖 화면 상태(목록 탭·펼친 컬렉션·접은 갈래)는 여기서만 갖는다.
@@ -45,29 +48,35 @@ const styles = {
   brand: 'mx-3 mt-3 flex h-12 shrink-0 items-center gap-2.5',
   brandRail: 'mt-3 flex h-12 shrink-0 items-center justify-center',
   logo: 'group relative flex h-9 w-9 shrink-0 items-center justify-center rounded-[12px] border border-emerald-200 bg-emerald-50 text-sm font-bold text-emerald-700 transition-colors hover:bg-emerald-100 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-500/30',
-  brandName: 'min-w-0 flex-1',
-  brandTitle: 'truncate text-sm font-semibold tracking-tight text-slate-900',
+  // 제목 = 첫 화면 버튼
+  brandName: 'group/title min-w-0 flex-1 rounded-md text-left outline-none',
+  brandTitle: 'truncate text-sm font-semibold tracking-tight text-slate-900 transition-colors group-hover/title:text-emerald-700',
   brandSub: 'truncate text-[11px] text-slate-500',
-  nav: 'flex shrink-0 flex-col gap-0.5 px-2 pt-3',
-  navButton: 'flex h-8 items-center gap-2.5 rounded-md px-2 text-left text-[13px] transition-colors',
-  navIdle: 'text-slate-600 hover:bg-slate-100 hover:text-slate-800',
-  navActive: 'bg-emerald-50 text-emerald-700',
+  headBtn: 'inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800',
+  search: 'h-8 w-full rounded-lg border border-slate-200 bg-white pl-8 pr-8 text-[13px] text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-emerald-300 focus:ring-2 focus:ring-emerald-500/20',
+  searchIcon: 'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400',
+  searchClear: 'absolute right-1.5 top-1/2 inline-flex h-5 w-5 -translate-y-1/2 items-center justify-center rounded text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-700',
+  seg: 'mx-3 mt-2 flex shrink-0 gap-0.5 rounded-lg bg-slate-100 p-[3px]',
+  segBtn: 'flex h-7 flex-1 items-center justify-center rounded-md text-[12.5px] font-medium transition-colors',
+  segIdle: 'text-slate-500 hover:text-slate-700',
+  segOn: 'bg-white text-slate-900 shadow-sm',
   divider: 'mx-3 my-2.5 h-px shrink-0 bg-slate-100',
   body: 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3',
-  footer: 'flex shrink-0 items-center gap-1 border-t border-slate-100 px-2 py-2',
   railList: 'flex flex-col items-center gap-1',
   railBtn: 'inline-flex h-9 w-9 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-800',
   railBtnActive: 'inline-flex h-9 w-9 items-center justify-center rounded-md bg-emerald-50 text-emerald-700 transition-colors',
   iconBtn: 'inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-700',
+  // 줄에 마우스를 올려야 보이는 버튼 — display를 iconBtn과 따로 (inline-flex와 hidden이 겹치면 순서로 갈림)
+  rowAction: 'hidden h-6 w-6 shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-slate-200/70 hover:text-slate-700 group-hover:inline-flex group-focus-within:inline-flex',
   // 컬렉션 줄 (mongolive ConnectionsTree 행)
   collRow: 'group flex h-8 w-full shrink-0 items-center gap-1.5 rounded-md pr-1 text-left text-[13px] transition-colors hover:bg-slate-100',
-  collLabel: 'min-w-0 flex-1 truncate font-semibold text-slate-600',
+  collLabel: 'min-w-0 flex-1 truncate font-semibold',
   count: 'shrink-0 pr-1 font-mono text-[11px] tabular-nums text-slate-400',
-  hoverOnly: 'hidden group-hover:inline-flex group-focus-within:inline-flex',
   item: 'flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 transition-colors',
   itemIdle: 'hover:bg-slate-100',
   itemOn: 'bg-selected',
   itemTitle: 'truncate text-[13px] font-medium text-slate-700',
+  mark: 'rounded-sm bg-amber-100 text-inherit',
   itemMeta: 'flex gap-1.5 text-[11px] tabular-nums text-slate-400',
   sectionHead: 'mx-2 mb-1 mt-3 text-[11px] font-semibold uppercase tracking-wider text-slate-400',
   tag: 'rounded-full border px-2 py-0.5 text-[12px] transition-colors',
@@ -104,6 +113,8 @@ interface Props {
 // ── 목록 (전체 단계의 내용) ─────────────────────────────────────────────────
 
 interface ListState {
+  query: string
+  setQuery: (q: string) => void
   tab: SideTab
   setTab: (t: SideTab) => void
   tag: string | null
@@ -120,32 +131,54 @@ function Logo({ hoverIcon: HoverIcon, label, onClick }: { hoverIcon: LucideIcon;
   return (
     <button type="button" className={styles.logo} onClick={onClick} aria-label={label} data-tt={label}>
       <span className="group-hover:hidden group-focus-visible:hidden" aria-hidden>
-        D
+        {SITE.mark}
       </span>
       <HoverIcon size={16} className="hidden group-hover:block group-focus-visible:block" aria-hidden />
     </button>
   )
 }
 
-function ThemeToggle({ rail }: { rail?: boolean }) {
+// 테마 — 아이콘 하나 (전체: 머리 오른쪽, 레일: 맨 아래)
+function ThemeToggle({ className }: { className: string }) {
   const [dark, setDark] = useState(isDark)
   useEffect(() => onSystemTheme(() => setDark(isDark())), [])
   const label = dark ? '라이트 모드' : '다크 모드'
   const Icon = dark ? Sun : Moon
-  return rail ? (
-    <button type="button" className={styles.railBtn} onClick={() => setDark(toggleTheme())} aria-label={label} data-tt={label}>
+  return (
+    <button type="button" className={className} onClick={() => setDark(toggleTheme())} aria-label={label} data-tt={label}>
       <Icon size={16} />
-    </button>
-  ) : (
-    <button type="button" className={cn(styles.navButton, styles.navIdle, 'flex-1')} onClick={() => setDark(toggleTheme())} aria-label={label}>
-      <Icon size={15} />
-      <span>{label}</span>
     </button>
   )
 }
 
-function FullContent(p: Props & { list: ListState; bodyRef: RefObject<HTMLDivElement>; onCollapse: () => void; onPick: (id: string) => void }) {
+// 찾은 제목에서 검색어 자리 칠하기 (띄어쓰기 없이 맞은 건 칠하지 않음)
+function Marked({ text, query }: { text: string; query: string }) {
+  const q = query.trim().toLowerCase()
+  const i = q ? text.toLowerCase().indexOf(q) : -1
+  if (i < 0) return <>{text}</>
+  return (
+    <>
+      {text.slice(0, i)}
+      <mark className={styles.mark}>{text.slice(i, i + q.length)}</mark>
+      {text.slice(i + q.length)}
+    </>
+  )
+}
+
+function FullContent(
+  p: Props & { list: ListState; bodyRef: RefObject<HTMLDivElement>; focusSearch: number; onSearchFocused: () => void; onCollapse: () => void; onPick: (id: string) => void },
+) {
   const { ix, view, list } = p
+  const searchRef = useRef<HTMLInputElement>(null)
+  // 레일의 검색 아이콘으로 펼쳤으면 검색칸에 바로
+  useEffect(() => {
+    if (!p.focusSearch) return
+    searchRef.current?.focus()
+    p.onSearchFocused() // 한 번만 — 다음에 펼칠 땐 검색칸에 안 감
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [p.focusSearch])
+  const hits = useMemo(() => searchDocs(ix, list.query), [ix, list.query])
+  const searching = list.query.trim() !== ''
   const marks = useMemo(() => linkMarks(ix, p.focusDoc), [ix, p.focusDoc])
   const count = (cid: string) => ix.docsByCollection.get(cid)?.length ?? 0
   const tree = (cid: string) => (
@@ -162,7 +195,29 @@ function FullContent(p: Props & { list: ListState; bodyRef: RefObject<HTMLDivEle
   )
 
   let body: ReactNode
-  if (list.tab === 'collections') {
+  if (searching) {
+    body = hits.length ? (
+      hits.map(({ doc, alias }) => (
+        <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id)} className={cn(styles.item, view.main === doc.id ? styles.itemOn : styles.itemIdle)} data-hit>
+          <span className={styles.itemTitle}>
+            <Marked text={doc.title} query={list.query} />
+          </span>
+          <span className={styles.itemMeta}>
+            <span className="truncate">{ix.collectionsById.get(doc.collectionId)?.title}</span>
+            {alias && (
+              <span className="truncate">
+                별칭 <Marked text={alias} query={list.query} />
+              </span>
+            )}
+          </span>
+        </DocLink>
+      ))
+    ) : (
+      <p className="px-2 py-1.5 text-[12px] text-slate-400" data-no-hit>
+        맞는 제목이 없어요
+      </p>
+    )
+  } else if (list.tab === 'collections') {
     const k = list.only ? ix.collectionsById.get(list.only) : undefined
     if (k) {
       body = (
@@ -198,14 +253,14 @@ function FullContent(p: Props & { list: ListState; bodyRef: RefObject<HTMLDivEle
                 aria-expanded={isOpen}
               >
                 <ChevronDown size={14} className={cn('ml-1 shrink-0 text-slate-400 transition-transform', !isOpen && '-rotate-90')} aria-hidden />
-                <span className={cn(styles.collLabel, mainCid === c.id && 'text-slate-900')} data-coll-title>
+                <span className={cn(styles.collLabel, mainCid === c.id ? 'text-slate-900' : 'text-slate-600')} data-coll-title>
                   {c.title}
                 </span>
               </button>
               <span className={cn(styles.count, 'group-hover:hidden group-focus-within:hidden')}>{count(c.id)}</span>
               <button
                 type="button"
-                className={cn(styles.iconBtn, styles.hoverOnly)}
+                className={styles.rowAction}
                 onClick={() => {
                   list.setOnly(c.id)
                   if (p.bodyRef.current) p.bodyRef.current.scrollTop = 0
@@ -237,49 +292,79 @@ function FullContent(p: Props & { list: ListState; bodyRef: RefObject<HTMLDivEle
     <>
       <div className={styles.brand}>
         <Logo hoverIcon={PanelLeftClose} label="아이콘만 보기" onClick={p.onCollapse} />
-        <div className={styles.brandName}>
-          <p className={styles.brandTitle}>Dumpster</p>
-          <p className={styles.brandSub}>쌩메모 아카이브</p>
-        </div>
-      </div>
-      <nav className={styles.nav} aria-label="목록 보기">
-        <button type="button" className={cn(styles.navButton, !view.main ? styles.navActive : styles.navIdle)} onClick={p.onHome}>
-          <House size={15} />
-          <span>첫 화면</span>
+        <button type="button" className={styles.brandName} onClick={p.onHome} data-tt="첫 화면" data-home>
+          <p className={styles.brandTitle}>{SITE.title}</p>
+          <p className={styles.brandSub}>{SITE.author}</p>
         </button>
-        {TABS.map(({ tab, icon: Icon, label }) => (
+        <ThemeToggle className={styles.headBtn} />
+      </div>
+      <div className="relative mx-3 mt-1 shrink-0">
+        <Search size={14} className={styles.searchIcon} aria-hidden />
+        <input
+          ref={searchRef}
+          type="search"
+          className={cn(styles.search, '[&::-webkit-search-cancel-button]:hidden')}
+          placeholder="제목 찾기"
+          aria-label="제목 찾기"
+          value={list.query}
+          onChange={(e) => list.setQuery(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter' && hits[0]) p.onPick(hits[0].doc.id)
+            if (e.key === 'Escape' && list.query) {
+              e.stopPropagation() // 떠 있는 사이드바의 Esc(닫기)보다 먼저 — 검색어부터 지운다
+              list.setQuery('')
+            }
+          }}
+          data-search
+        />
+        {list.query && (
+          <button
+            type="button"
+            className={styles.searchClear}
+            onClick={() => {
+              list.setQuery('')
+              searchRef.current?.focus()
+            }}
+            aria-label="검색어 지우기"
+            data-tt="검색어 지우기"
+          >
+            <X size={13} />
+          </button>
+        )}
+      </div>
+      <div className={styles.seg} role="group" aria-label="목록 보기">
+        {TABS.map(({ tab, label }) => (
           <button
             key={tab}
             type="button"
-            aria-pressed={list.tab === tab}
-            className={cn(styles.navButton, list.tab === tab ? styles.navActive : styles.navIdle)}
-            onClick={() => list.setTab(tab)}
+            aria-pressed={!searching && list.tab === tab}
+            className={cn(styles.segBtn, !searching && list.tab === tab ? styles.segOn : styles.segIdle)}
+            onClick={() => {
+              list.setQuery('')
+              list.setTab(tab)
+            }}
           >
-            <Icon size={15} />
-            <span>{label}</span>
+            {label}
           </button>
         ))}
-      </nav>
+      </div>
       <div className={styles.divider} />
       <div className={styles.body} ref={p.bodyRef}>
         {body}
-      </div>
-      <div className={styles.footer}>
-        <ThemeToggle />
       </div>
     </>
   )
 }
 
-function RailContent({ tab, onExpand, onHide, onHome, onTab }: { tab: SideTab; onExpand: () => void; onHide: () => void; onHome: () => void; onTab: (t: SideTab) => void }) {
+function RailContent({ tab, onExpand, onHide, onSearch, onTab }: { tab: SideTab; onExpand: () => void; onHide: () => void; onSearch: () => void; onTab: (t: SideTab) => void }) {
   return (
     <>
       <div className={styles.brandRail}>
         <Logo hoverIcon={PanelLeftOpen} label="사이드바 펼치기" onClick={onExpand} />
       </div>
       <nav className={cn(styles.railList, 'pt-3')} aria-label="목록 보기">
-        <button type="button" className={styles.railBtn} onClick={onHome} aria-label="첫 화면" data-tt="첫 화면">
-          <House size={16} />
+        <button type="button" className={styles.railBtn} onClick={onSearch} aria-label="제목 찾기" data-tt="제목 찾기">
+          <Search size={16} />
         </button>
         {TABS.map(({ tab: t, icon: Icon, label }) => (
           <button key={t} type="button" className={t === tab ? styles.railBtnActive : styles.railBtn} onClick={() => onTab(t)} aria-label={label} data-tt={label}>
@@ -289,7 +374,7 @@ function RailContent({ tab, onExpand, onHide, onHome, onTab }: { tab: SideTab; o
       </nav>
       <div className="flex-1" />
       <div className={cn(styles.railList, 'pb-3')}>
-        <ThemeToggle rail />
+        <ThemeToggle className={styles.railBtn} />
         <div className="my-1 h-px w-6 bg-slate-100" />
         <button type="button" className={styles.railBtn} onClick={onHide} aria-label="사이드바 숨기기" data-tt="사이드바 숨기기 — 왼쪽 끝에서 다시 꺼낸다">
           <ChevronsLeft size={16} />
@@ -453,6 +538,8 @@ export function Sidebar(p: Props) {
   const { mode, isOverlay, width, setMode } = sidebar
 
   // 목록 상태
+  const [query, setQuery] = useState('')
+  const [focusSearch, setFocusSearch] = useState(0)
   const [tab, setTab] = useState<SideTab>('collections')
   const [tag, setTag] = useState<string | null>(null)
   const [open, setOpen] = useState<Set<string>>(() => new Set())
@@ -462,6 +549,8 @@ export function Sidebar(p: Props) {
   const bodyRef = useRef<HTMLDivElement>(null)
   const scrollTo = useRef<string | null>(null) // 다 그린 뒤 트리에서 보이게 할 글
   const list: ListState = {
+    query,
+    setQuery,
     tab,
     setTab,
     tag,
@@ -501,6 +590,7 @@ export function Sidebar(p: Props) {
     const cid = ix.docsById.get(p.reveal.id)?.collectionId
     if (!cid) return
     setTab('collections')
+    setQuery('')
     setOpen((s) => (s.has(cid) ? s : new Set(s).add(cid)))
     setOnly((o) => (o && o !== cid ? cid : o))
     scrollTo.current = p.reveal.id
@@ -573,7 +663,7 @@ export function Sidebar(p: Props) {
     if (overlayOpen) setMode('rail')
   }
   const full = (
-    <FullContent {...p} list={list} bodyRef={bodyRef} onCollapse={() => setMode('rail')} onPick={pick} onHome={home} />
+    <FullContent {...p} list={list} bodyRef={bodyRef} focusSearch={focusSearch} onSearchFocused={() => setFocusSearch(0)} onCollapse={() => setMode('rail')} onPick={pick} onHome={home} />
   )
 
   return (
@@ -600,7 +690,10 @@ export function Sidebar(p: Props) {
                   tab={tab}
                   onExpand={() => setMode('full')}
                   onHide={() => setMode('collapsed')}
-                  onHome={home}
+                  onSearch={() => {
+                    setFocusSearch((n) => n + 1)
+                    setMode('full')
+                  }}
                   onTab={(t) => {
                     setTab(t)
                     setMode('full')

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
 import { buildGraph } from '../../builder/src/build'
 import { backlinks, branchInfo, descendants, linkMarks, outLinks, seeAlso } from '../src/links'
+import { searchDocs } from '../src/search'
 
 // 글 끝 목록·트리 ↙/↗·갈래 카드 계산 — 짜가 볼트 그래프 그대로
 const vaultDir = fileURLToPath(new URL('../../../fixtures/vault', import.meta.url))
@@ -77,5 +78,22 @@ describe('갈래', () => {
     const info = branchInfo(ix, id('회고 - 도커 쓸만한가'))
     expect(info.count).toBe(1 + descendants(ix, id('회고 - 도커 쓸만한가')).length)
     expect(info.exits).toEqual([ix.docsById.get(id('k3s 도전기'))!.collectionId])
+  })
+})
+
+describe('사이드바 검색', () => {
+  const titlesOf = (q: string) => searchDocs(ix, q).map((h) => h.doc.title)
+  it('띄어쓰기·대소문자 무시, 앞에서 맞은 제목 먼저', () => {
+    expect(titlesOf('용량부족')).toEqual(['용량 부족 사태'])
+    expect(titlesOf('os')[0]).toBe('OS 설치')
+  })
+  it('별칭으로도 찾는다', () => {
+    const hits = searchDocs(ix, '컨테이너 고민')
+    expect(hits.map((h) => [h.doc.title, h.alias])).toEqual([['컨테이너 뭐 올리지', '컨테이너 고민']])
+  })
+  it('빈 검색어 = 결과 없음, 비공개·draft는 그래프에 없어서 안 나옴', () => {
+    expect(searchDocs(ix, '   ')).toEqual([])
+    expect(titlesOf('몰래')).toEqual([])
+    expect(titlesOf('통장')).toEqual([])
   })
 })
