@@ -3,7 +3,8 @@ import { m } from 'framer-motion'
 import { Menu } from 'lucide-react'
 import { forwardRef } from 'react'
 import { paneVariants, QUICK } from './ui/motion'
-import { styles as pane } from './pane/Pane'
+import { frame } from './pane/styles'
+import { IconButton } from './ui/IconButton'
 import { SITE } from './ui/site'
 import { DocLink } from './ui/DocLink'
 import { md } from './ui/format'
@@ -25,18 +26,18 @@ export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: 
       exit="exit"
       transition={QUICK}
       style={{ zIndex: z }}
-      className={cx(pane.card, pane.grow, !phone && pane.edge)}
+      className={cx(frame.card, frame.grow, !phone && frame.edge)}
       data-slot="home"
     >
       {onMenu && (
-        <div className={cx(pane.header, 'border-transparent')}>
-          <button type="button" className={pane.iconBtn} onClick={onMenu} aria-label="목록 열기" data-tt="목록 열기" data-menu>
+        <div className={cx(frame.header, 'border-transparent')}>
+          <IconButton label="목록 열기" onClick={onMenu} data-menu>
             <Menu size={18} />
-          </button>
+          </IconButton>
         </div>
       )}
-      <div className={pane.scroll}>
-        <article className={pane.page}>
+      <div className={frame.scroll}>
+        <article className={frame.page}>
           <h1 className="mt-8 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 @[560px]:text-[28px]">{SITE.title}</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-slate-500">짬통에 던져 둔 글을 컬렉션별로 이어 읽는 곳.</p>
           <h2 className="mb-3 mt-9 text-[11px] font-semibold uppercase tracking-wider text-slate-400">컬렉션</h2>

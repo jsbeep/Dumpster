@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
-import { useEffect, useRef, useState, type RefObject } from 'react'
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import type { Slot } from '../core/view'
+import { IconButton } from '../ui/IconButton'
 
 // 칸 안 찾기 (11-27) — 펼친 글 하나에서만 찾는다. 브라우저 Ctrl+F는 두 칸·사이드바를 한꺼번에 뒤진다
 //   열기: 칸 머리 돋보기, 또는 지금 보는 칸에서 Ctrl/⌘+F (찾기 칸에 글자 커서가 있을 때 한 번 더 누르면 브라우저 찾기)
@@ -160,8 +161,6 @@ export function FindBar({ slot, rootRef, scrollRef, ready, focusN, onClose }: Pr
 
   const n = ranges.length
   const move = (d: number) => n && setCur((c) => (c + d + n) % n)
-  const btn =
-    'inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-hover hover:text-slate-900 disabled:pointer-events-none disabled:opacity-40'
 
   return (
     <div className="flex h-10 shrink-0 items-center gap-0.5 border-b border-line pl-3 pr-2" data-find={slot}>
@@ -188,15 +187,36 @@ export function FindBar({ slot, rootRef, scrollRef, ready, focusN, onClose }: Pr
       <span className="shrink-0 px-1.5 text-[12px] tabular-nums text-slate-400" aria-live="polite" data-find-count>
         {n ? `${cur + 1}/${n}${n >= MAX ? '+' : ''}` : query ? '없음' : ''}
       </span>
-      <button type="button" className={btn} onClick={() => move(-1)} disabled={n < 2} aria-label="이전 찾은 곳" data-tt="이전 (Shift+Enter)">
+      <IconButton label="이전 찾은 곳" tip="이전 (Shift+Enter)" onClick={() => move(-1)} disabled={n < 2}>
         <ChevronUp size={16} />
-      </button>
-      <button type="button" className={btn} onClick={() => move(1)} disabled={n < 2} aria-label="다음 찾은 곳" data-tt="다음 (Enter)">
+      </IconButton>
+      <IconButton label="다음 찾은 곳" tip="다음 (Enter)" onClick={() => move(1)} disabled={n < 2}>
         <ChevronDown size={16} />
-      </button>
-      <button type="button" className={btn} onClick={onClose} aria-label="찾기 닫기" data-tt="닫기 (Esc)">
+      </IconButton>
+      <IconButton label="찾기 닫기" tip="닫기 (Esc)" onClick={onClose}>
         <X size={15} />
-      </button>
+      </IconButton>
     </div>
   )
+}
+
+// 찾기 줄 열고 닫기 — 칸 머리 돋보기, 또는 지금 보는 칸에서 Ctrl/⌘+F.
+// 찾기 칸에 글자 커서가 있으면 그 Ctrl+F는 브라우저에 맡긴다
+//   n: 0 = 닫힘, 그 밖 = 열 때마다 늘어남 (FindBar의 focusN — 찾기 칸에 커서)
+export function useFind(focused: boolean, ready: boolean) {
+  const [n, setN] = useState(0)
+  const open = useCallback(() => setN((x) => x + 1), [])
+  const close = useCallback(() => setN(0), [])
+  useEffect(() => {
+    if (!focused || !ready) return
+    const onKey = (e: KeyboardEvent) => {
+      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return
+      if ((document.activeElement as HTMLElement | null)?.dataset.findInput !== undefined) return
+      e.preventDefault()
+      open()
+    }
+    addEventListener('keydown', onKey)
+    return () => removeEventListener('keydown', onKey)
+  }, [focused, ready, open])
+  return { n, open, close }
 }
