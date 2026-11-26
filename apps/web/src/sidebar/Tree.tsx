@@ -3,6 +3,7 @@ import type { GraphIndex, TreeRow } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, CornerUpLeft } from 'lucide-react'
 import { descendants, type LinkMark } from '../core/links'
+import { shownTree } from '../core/treeRows'
 import { collapseY } from '../ui/motion'
 import { DocLink } from '../ui/DocLink'
 import { dotClass, type DotShape, type DotState } from '../ui/dots'
@@ -49,24 +50,17 @@ interface Props {
 }
 
 export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen }: Props) {
-  const tree = ix.tree(collectionId)
   const cur = activeOf(view)
   const inTabs = new Set(view.tabs)
   const sel = view.main && ix.docsById.get(view.main)?.collectionId === collectionId ? view.main : null
-
-  const anc = new Set<string>()
-  for (const id of [view.main, cur]) {
-    if (id && ix.docsById.get(id)?.collectionId === collectionId) for (const a of ix.ancestors(id)) anc.add(a)
-  }
-  const collapsed = new Set(folds.filter((x) => !anc.has(x)))
-  const hidden = new Set([...collapsed].flatMap((x) => descendants(ix, x)))
+  const { rows, orphans, folded, pinned } = shownTree(ix, collectionId, view, folds)
 
   const row = (r: TreeRow) => {
     const d = ix.docsById.get(r.docId)
     if (!d) return null
     const isSel = sel === r.docId
     const isAct = cur === r.docId
-    const isFolded = collapsed.has(r.docId)
+    const isFolded = folded.has(r.docId)
     const isHl = hl.includes(r.docId)
     const up = r.branch === 'none' && !r.root
     const down = r.forks > 0 && !isFolded
@@ -128,7 +122,7 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
               <ArrowUpRight size={13} aria-hidden />
             </span>
           )}
-          {r.forks > 1 && !anc.has(r.docId) && (
+          {r.forks > 1 && !pinned.has(r.docId) && (
             <button
               type="button"
               className={styles.fold}
@@ -146,10 +140,9 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
     )
   }
 
-  const orphans = tree.orphans.filter((r) => !hidden.has(r.docId))
   return (
     <AnimatePresence initial={false}>
-      {tree.rows.filter((r) => !hidden.has(r.docId)).map(row)}
+      {rows.map(row)}
       {orphans.length > 0 && (
         <div key="sep" className={styles.sep}>
           따로 읽는 글

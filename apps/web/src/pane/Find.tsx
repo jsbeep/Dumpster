@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import type { Slot } from '../core/view'
+import { useKeyDown } from '../hooks/useKeys'
 import { IconButton } from '../ui/IconButton'
 
 // 칸 안 찾기 (11-27) — 펼친 글 하나에서만 찾는다. 브라우저 Ctrl+F는 두 칸·사이드바를 한꺼번에 뒤진다
@@ -207,16 +208,11 @@ export function useFind(focused: boolean, ready: boolean) {
   const [n, setN] = useState(0)
   const open = useCallback(() => setN((x) => x + 1), [])
   const close = useCallback(() => setN(0), [])
-  useEffect(() => {
-    if (!focused || !ready) return
-    const onKey = (e: KeyboardEvent) => {
-      if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return
-      if ((document.activeElement as HTMLElement | null)?.dataset.findInput !== undefined) return
-      e.preventDefault()
-      open()
-    }
-    addEventListener('keydown', onKey)
-    return () => removeEventListener('keydown', onKey)
-  }, [focused, ready, open])
+  useKeyDown((e) => {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return
+    if ((document.activeElement as HTMLElement | null)?.dataset.findInput !== undefined) return
+    e.preventDefault()
+    open()
+  }, focused && ready)
   return { n, open, close }
 }

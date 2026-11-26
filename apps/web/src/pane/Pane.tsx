@@ -13,12 +13,12 @@ import { PaneHeader } from './PaneHeader'
 import { frame } from './styles'
 import { Toc } from './Toc'
 import { useDoc } from './useDoc'
-import { scrollToAnchor, useHeadingJump, useScrollSpy } from './useScroll'
+import { scrollToAnchor, useHeadingJump, useScrollMemory, useScrollSpy } from './useScroll'
 import { useWidthFollow } from './useWidthFollow'
 
 // 칸 하나 — 흐름 칸이든 연관 칸이든 같은 모양 (design.md §3 "칸"). 여기선 조립만 한다:
 //   머리 PaneHeader · 찾기 줄(열었을 때) FindBar · 본문 Article(없으면 Gone) · 오른쪽 위 목차 Toc · 반짝(flash)
-//   글 불러오기 useDoc · 읽는 위치·헤딩 이동 useScroll · 칸 폭 바뀔 때 본문 따라가기 useWidthFollow
+//   글 불러오기 useDoc · 읽던 자리·읽는 위치·헤딩 이동 useScroll · 칸 폭 바뀔 때 본문 따라가기 useWidthFollow
 // 칸 자체가 AnimatePresence의 직접 자식이라 ref를 넘긴다 (popLayout이 재야 함)
 
 interface Props {
@@ -49,7 +49,12 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   const hasRel = view.tabs.length > 0
 
   const scrollRef = useRef<HTMLDivElement>(null)
-  const { spy, onScroll } = useScrollSpy(scrollRef, heads)
+  const { spy, onScroll: spyScroll } = useScrollSpy(scrollRef, heads)
+  const keep = useScrollMemory(scrollRef, p.docId, !!doc)
+  const onScroll = () => {
+    spyScroll()
+    keep()
+  }
   useHeadingJump(scrollRef, p.pending, slot, doc)
   const jump = (anchor: string) => scrollToAnchor(scrollRef.current, anchor)
   const find = useFind(p.focused, !!doc)

@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest'
 // 시나리오 표에 적힌 링크·이전/다음 글이 데이터에 정말 있는지도 같이 본다
 import { buildGraph } from '../../builder/src/build'
 import { hashOf, parseHash } from '../src/core/route'
-import { HOME, activeOf, isView, reduce, routeOf, viewOfRoute, type Action, type Result, type View } from '../src/core/view'
+import { HOME, activeOf, freshDocs, isView, reduce, routeOf, shownDocs, viewOfRoute, type Action, type Result, type View } from '../src/core/view'
 
 const vaultDir = fileURLToPath(new URL('../../../fixtures/vault', import.meta.url))
 const FIXED = { created: '2026-11-24T12:00:00+09:00', updated: '2026-11-24T12:00:00+09:00' }
@@ -265,5 +265,36 @@ describe('불변식', () => {
       expect(r.history === 'none').toBe(r.view === v)
       v = r.view
     }
+  })
+})
+
+// P4.3 — 칸에 들어온 글이 '처음 여는 글'(맨 위부터)인지 '돌아온 글'(읽던 자리로)인지
+describe('스크롤 기억: 처음 여는 글', () => {
+  const after = (v: View, a: Action) => reduce(v, a).view
+  const fresh = (v: View, a: Action) => freshDocs(v, after(v, a)).map(title)
+
+  it('보이는 글 = 흐름 글 + 펼친 탭 (첫 화면은 없음)', () => {
+    expect(shownDocs(view('용량 부족 사태', ['OS 설치', '외장 SSD 달기'], 'OS 설치')).map(title)).toEqual(['용량 부족 사태', 'OS 설치'])
+    expect(shownDocs(HOME)).toEqual([])
+  })
+  it('트리·이전/다음·새 링크로 연 글은 처음부터', () => {
+    expect(fresh(view('용량 부족 사태'), { type: 'open', id: id('OS 설치') })).toEqual(['OS 설치'])
+    expect(fresh(view('도커 설치'), { type: 'step', slot: 'main', id: id('고정 IP 설정') })).toEqual(['고정 IP 설정'])
+    expect(fresh(view('용량 부족 사태'), { type: 'link', id: id('외장 SSD 달기') })).toEqual(['외장 SSD 달기'])
+  })
+  it('예전에 읽던 글이라도 지금 칸 상태에 없으면 처음부터 (트리로 다시 열기)', () => {
+    let v = view('용량 부족 사태')
+    v = after(v, { type: 'open', id: id('OS 설치') })
+    expect(fresh(v, { type: 'open', id: id('용량 부족 사태') })).toEqual(['용량 부족 사태'])
+  })
+  it('탭에 있던 글이 다시 보이면 읽던 자리로 — 띠 누르기 · 탭 닫기 · 흐름 칸으로 · 트리에서 탭 글 고르기', () => {
+    const v = view('용량 부족 사태', ['OS 설치', '외장 SSD 달기'], '외장 SSD 달기')
+    expect(fresh(v, { type: 'pick', index: 0 })).toEqual([])
+    expect(fresh(v, { type: 'close', index: 1 })).toEqual([])
+    expect(fresh(v, { type: 'promote' })).toEqual([])
+    expect(fresh(v, { type: 'open', id: id('OS 설치') })).toEqual([])
+  })
+  it('j/k(scan)도 새 글이면 처음부터', () => {
+    expect(fresh(view('OS 설치'), { type: 'open', id: id('고정 IP 설정'), scan: true })).toEqual(['고정 IP 설정'])
   })
 })

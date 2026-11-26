@@ -2,7 +2,8 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import type { Store } from '../core/data'
 import { hashOf, parseHash } from '../core/route'
 import type { GraphIndex } from '@dumpster/schema'
-import { activeOf, isView, reduce, routeOf, viewOfRoute, type Action, type Slot, type View } from '../core/view'
+import { activeOf, freshDocs, isView, reduce, routeOf, shownDocs, viewOfRoute, type Action, type Slot, type View } from '../core/view'
+import { forget, saveNow, seed, type ScrollMap } from './scrollMemory'
 
 // 칸 상태 훅 — reduce(순수 함수) 결과를 화면·브라우저 기록에 옮긴다 (design.md §3 "칸")
 //   view : 기록에 들어가는 칸 상태 (history.state.view, 주소엔 흐름 글 + 펼친 탭만)
@@ -10,7 +11,9 @@ import { activeOf, isView, reduce, routeOf, viewOfRoute, type Action, type Slot,
 //   flash: 이미 보이는 글로 가려 할 때 그 칸만 반짝
 //   pending: 헤딩 링크([[글#헤딩]]) → 그 글이 놓인 칸에서 헤딩까지 스크롤
 //   dir  : 새 글이 칸에 들어오는 방향 (1 = 오른쪽에서, -1 = 왼쪽에서, 0 = 제자리) — 칸 애니메이션용
-// 스크롤 복원·키보드(j/k)는 P4.3
+// 기록 한 칸 = { view, slot, scroll } — scroll은 그 기록에서 보이던 글들의 칸 안 자리 (hooks/scrollMemory).
+//   새 기록을 쌓기 직전에 지금 기록의 scroll을 적고, 처음 여는 글의 기억은 지운다(맨 위부터).
+//   뒤로/앞으로로 칸에 새로 들어오는 글은 그 기록의 scroll로 (계속 보이던 칸은 그대로)
 
 export interface Pulse {
   slot: Slot
@@ -44,7 +47,11 @@ function directionOf(ix: GraphIndex, a: View, action: Action, b: View): Dir {
 interface Saved {
   view: View
   slot: Slot
+  scroll?: ScrollMap
 }
+
+// 같은 기록을 고쳐 쓸 때 scroll을 잃지 않게 — 지금 기록 위에 덮는다
+const current = (): Partial<Saved> => (history.state && typeof history.state === 'object' ? (history.state as Partial<Saved>) : {})
 
 // 처음 상태: 기록에 남은 칸(새로고침·뒤로 와서 다시 연 탭) → 없으면 주소. 옛 임시 ID는 지금 ID로
 function initialView(store: Store): View {
@@ -62,7 +69,11 @@ const savedSlot = (v: View): Slot => {
 let pulseN = 0
 
 export function useView(store: Store) {
-  const [view, setView] = useState<View>(() => initialView(store))
+  const [view, setView] = useState<View>(() => {
+    const v = initialView(store)
+    seed(current().scroll, shownDocs(v)) // 새로고침 — 그 기록의 자리로
+    return v
+  })
   const [slot, setSlot] = useState<Slot>(() => savedSlot(view))
   const [flash, setFlash] = useState<Pulse | null>(null)
   const [pending, setPending] = useState<PendingHeading | null>(null)
@@ -73,9 +84,12 @@ export function useView(store: Store) {
   const slotRef = useRef(slot)
 
   // 처음 한 번: 주소를 지금 칸 모양으로 맞추고(옛 ID·잘못된 주소 정리) 기록에 칸을 적는다
+  // 페이지를 떠날 때(새로고침 포함) 지금 자리를 적어 둔다
   useEffect(() => {
     const v = viewRef.current
-    history.replaceState({ view: v, slot: slotRef.current } satisfies Saved, '', hashOf(routeOf(v)))
+    history.replaceState({ ...current(), view: v, slot: slotRef.current } satisfies Saved, '', hashOf(routeOf(v)))
+    addEventListener('pagehide', saveNow)
+    return () => removeEventListener('pagehide', saveNow)
   }, [])
 
   // 뒤로·앞으로 · 주소창에서 직접 고친 주소
@@ -91,6 +105,10 @@ export function useView(store: Store) {
         history.replaceState({ view: v, slot: 'main' } satisfies Saved, '', hashOf(routeOf(v)))
       }
       const s: Slot = saved?.slot === 'rel' && v.tabs.length ? 'rel' : 'main'
+      // 칸에 새로 들어오는 글만 그 기록의 자리로
+      const prev = viewRef.current
+      const entering = [v.main !== prev.main ? v.main : null, activeOf(v) !== activeOf(prev) ? activeOf(v) : null]
+      seed(saved?.scroll, entering.filter((x): x is string => x !== null))
       viewRef.current = v
       slotRef.current = s
       setDir(STILL)
@@ -114,11 +132,13 @@ export function useView(store: Store) {
     const v = r.view
     const s: Slot = !v.tabs.length ? 'main' : (r.slot ?? slotRef.current)
     if (r.history !== 'none') {
-      const saved: Saved = { view: v, slot: s }
-      if (r.history === 'push') history.pushState(saved, '', hashOf(routeOf(v)))
-      else history.replaceState(saved, '', hashOf(routeOf(v)))
+      if (r.history === 'push') saveNow() // 떠나는 기록에 지금 자리를 적고
+      forget(freshDocs(before, v)) // 처음 여는 글은 맨 위부터
+      if (r.history === 'push') {
+        history.pushState({ view: v, slot: s } satisfies Saved, '', hashOf(routeOf(v)))
+      } else history.replaceState({ ...current(), view: v, slot: s } satisfies Saved, '', hashOf(routeOf(v)))
     } else if (s !== slotRef.current) {
-      history.replaceState({ view: v, slot: s } satisfies Saved, '')
+      history.replaceState({ ...current(), view: v, slot: s } satisfies Saved, '')
     }
     if (v !== before) setDir(directionOf(store.index, before, action, v))
     viewRef.current = v
@@ -134,7 +154,7 @@ export function useView(store: Store) {
     if (s === slotRef.current || !viewRef.current.tabs.length) return
     slotRef.current = s
     setSlot(s)
-    history.replaceState({ view: viewRef.current, slot: s } satisfies Saved, '')
+    history.replaceState({ ...current(), view: viewRef.current, slot: s } satisfies Saved, '')
   }, [])
 
   return { view, slot, flash, pending, dir, dispatch, focusSlot }

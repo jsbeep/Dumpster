@@ -40,6 +40,16 @@ export interface Result {
 
 export const activeOf = (v: View): string | null => v.tabs[v.active] ?? null
 
+// 칸에 펼쳐 보이는 글 (흐름 글 + 펼친 탭). 접힌 칸도 포함 — 펴면 그 글이 다시 보인다
+export const shownDocs = (v: View): string[] => [v.main, activeOf(v)].filter((x): x is string => x !== null)
+
+// 새로 보이게 된 글 중 직전 칸 상태에 아예 없던 글(흐름 글도 탭도 아니던 글) — 처음부터(맨 위) 읽는다 (P4.3 스크롤 기억)
+// 탭에 있던 글이 다시 펼쳐지거나 흐름 칸으로 옮겨 가면 여기 안 들어간다 → 읽던 자리로
+export function freshDocs(before: View, after: View): string[] {
+  const had = new Set([before.main, ...before.tabs])
+  return shownDocs(after).filter((id) => !had.has(id))
+}
+
 export function reduce(view: View, action: Action): Result {
   switch (action.type) {
     case 'open': {

@@ -5,6 +5,7 @@ import { parseHash } from './core/route'
 import { activeOf } from './core/view'
 import { Home } from './Home'
 import { useDrawerWidth, useMedia } from './hooks/useMedia'
+import { useKeyDown } from './hooks/useKeys'
 import { useView } from './hooks/useView'
 import { Lightbox, type Zoom } from './Lightbox'
 import { Pane } from './pane/Pane'
@@ -65,16 +66,11 @@ export function Explorer({ store }: { store: Store }) {
   }, [rowFlash])
 
   // Esc — 그림 크게 → 폰 서랍 순서로 닫는다
-  useEffect(() => {
-    if (!zoom && !drawerOpen) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return
-      if (zoom) setZoom(null)
-      else setDrawer(false)
-    }
-    addEventListener('keydown', onKey)
-    return () => removeEventListener('keydown', onKey)
-  }, [zoom, drawerOpen])
+  useKeyDown((e) => {
+    if (e.key !== 'Escape') return
+    if (zoom) setZoom(null)
+    else setDrawer(false)
+  }, !!zoom || drawerOpen)
 
   // 칸을 누르면 그 칸이 지금 보는 칸 → 사이드바가 그 글의 컬렉션으로 (기록엔 안 쌓임)
   // 글로 가는 링크·버튼은 빼고 — 누르면 바로 다른 글이 열려서 사이드바가 한 번 더 바뀐다 (다른 컬렉션이 펴졌다 다시 접힘)
@@ -121,6 +117,7 @@ export function Explorer({ store }: { store: Store }) {
             dispatch({ type: 'open', id })
             setDrawer(false)
           }}
+          onScan={(id) => dispatch({ type: 'open', id, scan: true })}
           onHome={() => {
             dispatch({ type: 'home' })
             setDrawer(false)

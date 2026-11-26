@@ -1,7 +1,9 @@
 import type { GraphIndex } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { stepRow } from '../core/treeRows'
 import type { View } from '../core/view'
+import { isTyping, useKeyDown } from '../hooks/useKeys'
 import { QUICK } from '../ui/motion'
 import { PullHandle } from './PullHandle'
 import { Rail } from './Rail'
@@ -15,6 +17,8 @@ import { useSidebarList, type RevealRequest } from './useSidebarList'
 //   접힘: 화면 왼쪽 끝 당김 핸들(PullHandle)
 //   너비: 오른쪽 틈을 끌면 너비에 따라 단계가 바뀐다(useDrag). 더블클릭 = 기본 너비
 //   떠 있는 화면(좁은 창·두 칸)에선 레일까지만 붙고, 전체는 칸 위에 떠서 열린다(바깥 누르기·Esc·글 고르기 → 레일)
+//   j/k: 트리에서 다음/이전 글 — 지금 보는 칸의 글 줄에서 한 줄 아래/위를 누른 것과 같다(흐름 칸 교체). 기록은 덮어씀(scan).
+//        사이드바가 접혔거나 최근·태그 탭이어도 트리(접은 갈래 반영) 기준
 //   폰(≤720px, 11-27): 단계 없음. 칸 머리 ☰ → App이 사이드바+칸을 통째로 밀어 꺼낸다(서랍) — 여기선 전체 내용만 그린다
 // 11-27 평평한 판: 카드·그림자 없이 사이드바 바탕색만. 칸 쪽 경계선은 첫 칸의 왼쪽 선이 맡는다
 
@@ -41,6 +45,7 @@ interface Props {
   hl: (string | null)[]
   reveal: RevealRequest | null
   onOpen: (docId: string) => void
+  onScan: (docId: string) => void // j/k — 흐름 칸 교체, 기록 덮어씀
   onHome: () => void
 }
 
@@ -56,14 +61,18 @@ export function Sidebar(p: Props) {
 
   // 떠 있는 전체: Esc → 레일
   const overlayOpen = isOverlay && mode === 'full'
-  useEffect(() => {
-    if (!overlayOpen) return
-    const onKey = (e: globalThis.KeyboardEvent) => {
-      if (e.key === 'Escape') setMode('rail')
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [overlayOpen, setMode])
+  useKeyDown((e) => {
+    if (e.key === 'Escape') setMode('rail')
+  }, overlayOpen)
+
+  // j/k — 트리에서 지금 글 줄의 다음/이전 줄
+  useKeyDown((e) => {
+    if ((e.code !== 'KeyJ' && e.code !== 'KeyK') || e.ctrlKey || e.metaKey || e.altKey || isTyping(e.target) || !p.focusDoc) return
+    const next = stepRow(ix, p.view, list.folds, p.focusDoc, e.code === 'KeyJ' ? 1 : -1)
+    if (!next) return
+    e.preventDefault()
+    p.onScan(next)
+  }, !!p.focusDoc)
 
   // 붙어 있는 가장자리 끌기 / 접혔을 때 당김 핸들 끌기 — 둘 다 놓으면 너비로 단계를 정한다
   const edgeDrag = useDrag(sidebar.commitDrag)
