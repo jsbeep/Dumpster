@@ -21,8 +21,9 @@ export const frame = {
   // 폰 서랍 미끄러짐 — CSS transition(GPU 쪽, iOS 저전력 모드에서도 부드럽게). 곡선은 ui/motion QUICK, 길이 0.28초(11-27 사용자)
   slide: 'transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none',
   push: 'translate-x-[var(--push,0px)]', // 서랍이 열리면 바깥(Explorer)이 --push = 서랍 폭
-  page: 'mx-auto max-w-[760px] pb-16 @[560px]:px-11 @[560px]:pb-[72px]',
-  // 좁은 칸(<560px)의 좌우 여백 — 오른쪽 위 목차 줄(PC, 헤딩 둘 이상)이 있으면 그 자리만큼 오른쪽을 넓힌다. 없으면(폰·첫 화면·헤딩 적은 글) 같게
-  padEven: 'px-[22px]',
-  padToc: 'pl-[22px] pr-10',
+  page: 'mx-auto max-w-[760px] pb-16 @[560px]:pb-[72px]',
+  // 좌우 여백 — 오른쪽 위 목차 줄(PC, 헤딩 둘 이상)이 있으면 그 자리(칸 끝에서 약 52px)만큼 오른쪽을 넓힌다(제목 줄과 안 겹치게).
+  // 없으면(폰·첫 화면·헤딩 적은 글) 같게. 칸이 560px 넘으면 둘 다 넓게, 880px 넘으면 본문(최대 760px)이 가운데라 목차와 안 겹쳐 다시 같게
+  padEven: 'px-[22px] @[560px]:px-11',
+  padToc: 'pl-[22px] pr-14 @[560px]:pl-11 @[560px]:pr-16 @[880px]:pr-11',
 } as const

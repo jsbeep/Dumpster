@@ -14,8 +14,8 @@ const styles = {
   laneIdle: 'text-slate-400',
   laneFocus: 'text-slate-900',
   textBtn: 'h-7 max-[720px]:h-10 shrink-0 whitespace-nowrap rounded-md px-2 text-[12px] text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
-  headTitle: 'min-w-0 flex-1 truncate px-1.5 text-[13px] font-semibold text-slate-700',
-  tocBtn: 'flex h-10 min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 text-left text-[13.5px]',
+  headTitle: 'min-w-0 flex-1 truncate px-1.5 text-[13px] max-[720px]:text-[15px] font-semibold text-slate-700',
+  tocBtn: 'flex h-10 min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 text-left text-[15px]', // 폰 전용 (11-27 사용자: 키움)
   back: 'flex h-10 max-w-[46%] shrink-0 items-center gap-1 rounded-md pl-1 pr-2 text-[13.5px] text-slate-500 hover:bg-hover hover:text-slate-900',
 } as const
 
@@ -75,7 +75,7 @@ export function PaneHeader({ ix, view, slot, docId, title, showTitle, canFind, p
       {toc ? (
         <button type="button" className={styles.tocBtn} onClick={toc.onToggle} aria-expanded={toc.open} aria-label={`목차 — ${toc.label ?? title}`} data-phone-toc>
           <span className={cx('truncate', toc.label ? 'font-semibold text-slate-700' : 'font-medium text-slate-400')}>{toc.label ?? '목차'}</span>
-          <ChevronDown size={15} className={cx('shrink-0 text-slate-400', toc.open && 'rotate-180')} aria-hidden />
+          <ChevronDown size={17} className={cx('shrink-0 text-slate-400', toc.open && 'rotate-180')} aria-hidden />
         </button>
       ) : (
         <m.span className={styles.headTitle} initial={false} animate={{ opacity: showTitle ? 1 : 0 }} transition={{ duration: 0.15 }} data-head-title={showTitle || undefined}>

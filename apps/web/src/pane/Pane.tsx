@@ -13,7 +13,7 @@ import { PaneHeader } from './PaneHeader'
 import { frame } from './styles'
 import { headText, Toc, TocSheet } from './Toc'
 import { useDoc } from './useDoc'
-import { scrollToAnchor, useLanding, useScrollMemory, useScrollSpy } from './useScroll'
+import { scrollerOf, scrollToAnchor, useLanding, useScrollMemory, useScrollSpy } from './useScroll'
 import { useWidthFollow } from './useWidthFollow'
 
 // 칸 하나 — 흐름 칸이든 연관 칸이든 같은 모양 (design.md §3 "칸"). 여기선 조립만 한다:
@@ -74,6 +74,10 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   const phoneToc =
     p.phone && heads.length >= 2 ? { label: curHead ? headText(curHead) : spy.title ? title : null, open: tocOpen, onToggle: () => setTocOpen((o) => !o) } : undefined
   const jump = useCallback((anchor: string) => scrollToAnchor(scrollRef.current, anchor), []) // Article(memo)에 넘긴다
+  // 글 맨 위로 (폰 목차 펼침의 글 제목)
+  const toTop = useCallback(() => {
+    if (scrollRef.current) scrollerOf(scrollRef.current).scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
+  }, [])
   const find = useFind(p.focused, !!doc)
   const { setCard, innerRef, articleRef, unfreeze } = useWidthFollow(ref)
   useLanding(scrollRef, articleRef, p.pending, slot, p.docId, doc, find.open)
@@ -122,7 +126,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
             dispatch={dispatch}
           />
           {find.seed.n > 0 && doc && <FindBar slot={slot} rootRef={articleRef} scrollRef={scrollRef} ready={doc} seed={find.seed} onClose={find.close} />}
-          {phoneToc && tocOpen && <TocSheet heads={heads} current={spy.heading} onGo={jump} onClose={closeToc} />}
+          {phoneToc && tocOpen && <TocSheet title={title} heads={heads} current={spy.heading} onTop={toTop} onGo={jump} onClose={closeToc} />}
           </div>
           <div className={cx('relative flex min-h-0 flex-1', p.phone && cx(frame.cq, frame.push, frame.slide))} style={phoneBody}>
             <div
