@@ -1,7 +1,8 @@
-import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path'
 import { homedir } from 'node:os'
 import { fileURLToPath } from 'node:url'
+import { gzipSync } from 'node:zlib'
 import { SCHEMA_VERSION, buildGraphIndex, treeToText, type Block, type Graph } from '@dumpster/schema'
 import { buildGraph } from './build'
 import { diffGraphs } from './diff'
@@ -40,10 +41,12 @@ const { graph, report, assets } = buildGraph({ vaultDir, publicFolders })
 const json = JSON.stringify(graph)
 mkdirSync(dirname(outFile), { recursive: true })
 writeFileSync(outFile, json + '\n')
-// 이미지: graph.json 옆 assets/<해시>.<ext>. 이름이 내용 해시라 이미 있으면 건너뛴다
+// 이미지: graph.json 옆 assets/<해시>.<ext>. 이름이 내용 해시라 이미 있으면 건너뛴다 (옛 이미지는 안 지운다 → out/에 쌓임)
 let copied = 0
+const used = new Set<string>([resolve(outFile)])
 for (const asset of assets) {
   const dest = join(dirname(outFile), asset.src)
+  used.add(resolve(dest))
   if (existsSync(dest)) continue
   mkdirSync(dirname(dest), { recursive: true })
   copyFileSync(asset.file, dest)
@@ -101,7 +104,31 @@ const countBlocks = (blocks: Block[]) => {
 for (const d of graph.docs) countBlocks(d.blocks)
 console.log(`\n▦ 블록 ${[...blockCounts].sort((a, b) => b[1] - a[1]).map(([t, n]) => `${t} ${n}`).join(' · ')}`)
 
+// 크기 — graph.json(원본·gzip: gh-pages가 gzip으로 보낸다) · 이번 빌드가 쓰는 이미지 · out/ 전체(지난 빌드에서 남은 파일 포함)
+// 나누기 기준(11-27): graph.json gzip 약 150KB → search.json 떼기, 300~500KB → 블록도 글마다
+const size = (n: number) => (n < 1024 * 1024 ? `${(n / 1024).toFixed(1)}KB` : `${(n / 1024 / 1024).toFixed(2)}MB`)
+const walk = (dir: string): string[] =>
+  readdirSync(dir, { withFileTypes: true }).flatMap((e) => (e.isDirectory() ? walk(join(dir, e.name)) : [resolve(dir, e.name)]))
+let usedImages = 0
+let total = 0
+let leftN = 0
+let leftBytes = 0
+for (const file of walk(dirname(outFile))) {
+  const n = statSync(file).size
+  total += n
+  if (!used.has(file)) {
+    leftN++
+    leftBytes += n
+  } else if (file !== resolve(outFile)) usedImages += n
+}
+const raw = Buffer.byteLength(json + '\n')
+
 console.log(
   `\n✔ ${relative(repoRoot, outFile)} — 컬렉션 ${graph.collections.length} · 문서 ${graph.docs.length} · 엣지 ${graph.edges.length}` +
-    ` · 이미지 ${assets.length}(새로 복사 ${copied}) · ${(Buffer.byteLength(json) / 1024).toFixed(1)}KB · ${ms}ms`,
+    ` · 이미지 ${assets.length}(새로 복사 ${copied}) · ${ms}ms`,
+)
+console.log(
+  `  크기: graph.json ${size(raw)} (gzip ${size(gzipSync(json + '\n').length)}) · 이미지 ${used.size - 1}개 ${size(usedImages)}` +
+    ` · ${relative(repoRoot, dirname(outFile)) || '.'}/ 전체 ${size(total)}` +
+    (leftN ? ` (지난 빌드에서 남은 파일 ${leftN}개 ${size(leftBytes)} 포함)` : ''),
 )
