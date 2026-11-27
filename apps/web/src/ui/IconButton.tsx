@@ -6,7 +6,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 //           폰(≤720px)에선 md·lg가 40px 네모 + 아이콘 19px (손가락 — 28px은 너무 작았다, 11-27)
 //   tone  : 놓인 바탕 — page 칸 위(반투명 호버) · side 사이드바 머리·레일 · row 사이드바 줄 안(줄 호버 바탕보다 한 단계 진하게)
 //   on    : 고른 상태(레일의 지금 목록 탭) — 바탕·글자색을 tone 대신 이것 하나로
-//   reveal: 줄에 마우스를 올려야(또는 줄 안에 포커스) 보임 — display를 inline-flex 대신 hidden + group-hover
+//   reveal: 줄에 마우스를 올려야(또는 키보드로 줄 안에 포커스) 보임 — display를 inline-flex 대신 hidden + group-hover
 //   tip   : 툴팁이 label과 다를 때 (단축키·설명을 덧붙임)
 // 같은 속성 클래스를 두 개 겹치지 않게 크기·색·display는 각각 하나만 고른다 (cx는 겹친 클래스를 정리하지 않는다).
 // className은 자리(absolute 등)에만 쓴다
@@ -24,7 +24,8 @@ const TONE = {
 } as const
 const ON = 'bg-selected text-slate-900'
 const SHOW = 'inline-flex'
-const REVEAL = 'hidden group-hover:inline-flex group-focus-within:inline-flex'
+// 키보드로 줄에 들어왔을 때도 보이게 — focus-within이 아니라 :focus-visible만 (마우스로 줄을 누르면 포커스가 남아 다른 데를 누를 때까지 떠 있었다, 11-27)
+const REVEAL = 'hidden group-hover:inline-flex group-has-[:focus-visible]:inline-flex'
 const BASE = 'shrink-0 items-center justify-center transition-colors disabled:pointer-events-none disabled:opacity-40'
 
 interface Props extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 'aria-label' | 'children' | 'type'> {

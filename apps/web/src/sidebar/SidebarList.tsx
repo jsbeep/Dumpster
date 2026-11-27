@@ -41,7 +41,9 @@ const styles = {
   // 컬렉션 줄 (mongolive ConnectionsTree 행)
   collRow: 'group flex h-8 max-[720px]:h-9 w-full shrink-0 items-center gap-1.5 rounded-md pr-1 text-left text-[13px] transition-colors hover:bg-side-hover',
   collBtn: 'flex min-w-0 flex-1 items-center gap-1.5 self-stretch pl-0.5 text-left',
-  collLabel: 'min-w-0 flex-1 truncate font-semibold',
+  collLabel: 'min-w-0 truncate font-semibold', // 글자 폭만 — 바로 뒤에 이어읽기 점 (누르는 영역은 collBtn 전체)
+  // 이어읽는 글(흐름 칸)이 있는 컬렉션 — 트리의 흐름 글 점과 같은 강조색 (건너읽기 탭은 안 찍음, 11-27 사용자)
+  flowDot: 'h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600',
   count: 'shrink-0 pr-1 font-mono text-[11px] tabular-nums text-slate-400',
   mark: 'rounded-sm bg-amber-100 text-inherit',
   kbd: 'pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-line px-1.5 font-mono text-[10px] leading-4 text-slate-400 peer-focus:hidden',
@@ -158,6 +160,7 @@ export function SidebarList(p: Props) {
     )
   } else if (list.tab === 'collections') {
     const k = list.only ? ix.collectionsById.get(list.only) : undefined
+    const mainCid = view.main ? ix.docsById.get(view.main)?.collectionId : null
     if (k) {
       body = (
         <div data-coll={k.id} data-open>
@@ -167,6 +170,7 @@ export function SidebarList(p: Props) {
               <span className={cx(styles.collLabel, 'text-slate-900')} data-coll-title>
                 {k.title}
               </span>
+              {mainCid === k.id && <span className={styles.flowDot} data-tt="이어읽는 글이 이 컬렉션에" data-flow-dot />}
             </button>
             <span className={styles.count}>{count(k.id)}</span>
             <IconButton label="모든 컬렉션 보기" size="sm" tone="row" onClick={() => list.setOnly(null)}>
@@ -179,7 +183,6 @@ export function SidebarList(p: Props) {
         </div>
       )
     } else {
-      const mainCid = view.main ? ix.docsById.get(view.main)?.collectionId : null
       body = ix.graph.collections.map((c) => {
         const isOpen = list.open.has(c.id)
         // 폰은 마우스 올리기가 없어 '이 컬렉션만 보기'가 안 보였다 → 열린 컬렉션 줄엔 개수 옆에 늘 (11-27, 크기는 PC와 같게)
@@ -192,8 +195,9 @@ export function SidebarList(p: Props) {
                 <span className={cx(styles.collLabel, mainCid === c.id ? 'text-slate-900' : 'text-slate-600')} data-coll-title>
                   {c.title}
                 </span>
+                {mainCid === c.id && <span className={styles.flowDot} data-tt="이어읽는 글이 이 컬렉션에" data-flow-dot />}
               </button>
-              <span className={cx(styles.count, !pin && 'group-hover:hidden group-focus-within:hidden')}>{count(c.id)}</span>
+              <span className={cx(styles.count, !pin && 'group-hover:hidden group-has-[:focus-visible]:hidden')}>{count(c.id)}</span>
               <IconButton
                 label={`${c.title}만 보기`}
                 tip="이 컬렉션만 보기"
