@@ -60,9 +60,9 @@ function readNotes(vaultDir: string): SourceNote[] {
       else if (entry.isFile() && entry.name.toLowerCase().endsWith('.md')) {
         const raw = readFileSync(join(vaultDir, relPath), 'utf8')
         const { data, body } = readFrontmatter(raw)
-        const tags = (Array.isArray(data.tags) ? data.tags : [data.tags]).filter((t): t is string => typeof t === 'string')
+        const tags = (Array.isArray(data.tags) ? data.tags : [data.tags]).flatMap((t) => (typeof t === 'string' ? t.split(/[,\s]+/) : []))
         const oid = typeof data.oid === 'string' && /^[0-9a-f]{24}$/i.test(data.oid.trim()) ? data.oid.trim().toLowerCase() : null
-        notes.push({ relPath, raw, body, oid, draft: tags.some((t) => t.replace(/^#/, '').trim().toLowerCase() === 'draft') })
+        notes.push({ relPath, raw, body, oid, draft: tags.some((t) => ['_draft', 'draft'].includes(t.replace(/^#+/, '').trim().toLowerCase())) })
       }
     }
   }

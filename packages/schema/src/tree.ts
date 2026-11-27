@@ -4,7 +4,9 @@ import type { Collection, Doc, Edge, Graph } from './graph'
 //
 // 트리 그리는 규칙 (docs/design.md §3)
 //   1. 자식이 1개 → 같은 깊이로 이어 그린다
-//   2. 자식이 2개 이상 → 갈래 전부 한 칸 들여쓴다 (본류 없음)
+//   2. 태그 _branch 글(Doc.branch)은 곁가지 — 늘 한 칸 들여쓴다.
+//      태그 없는 갈래가 딱 하나면 그게 본줄기: 곁가지를 먼저 들여 그리고 본줄기는 같은 깊이로 이어 간다 (11-28)
+//      태그 없는 갈래가 0개거나 2개 이상이면 (본줄기를 모름) 갈래 전부 한 칸 들여쓴다 — 11-24의 '본류 없음' 그대로
 //   3. 형제 정렬: order → createdAt → 이름
 //   4. 루트는 매니페스트. 매니페스트가 있으면 prev 없는 일반 글은 '연결 안 됨'
 //   5. prev가 다른 컬렉션 글이면 이 컬렉션 안에선 루트로 그리고 continuesFrom에 출처를 적는다
@@ -22,8 +24,9 @@ export interface TreeRow {
   docId: string
   guides: boolean[] // 앞쪽 들여쓰기 칸마다 세로선(│)을 그을지
   branch: 'none' | 'mid' | 'last' // 갈래의 첫 글이면 mid(├─) / last(└─)
-  depth: number // 거쳐 온 분기점 수
+  depth: number // 들여쓴 칸 수 (거쳐 온 곁가지 수)
   forks: number // 이 컬렉션 안에서 이 글을 prev로 둔 글 수 (2 이상이면 분기점)
+  sides: number // 그중 한 칸 들여 그린 갈래 수 (1 이상이면 접을 수 있다)
   root: boolean // 한 덩어리의 시작 행 (매니페스트, 다른 컬렉션에서 이어진 글, 연결 안 됨 덩어리)
   continuesFrom: string | null // prev가 다른 컬렉션 글이면 그 글 ID
   orphan: OrphanReason | null // 연결 안 됨 덩어리의 시작 행에만
@@ -49,6 +52,8 @@ export interface GraphIndex {
   tree(collectionId: string): CollectionTree
   // 같은 컬렉션 안에서 루트 → 부모 순서의 조상 ID (자기 제외). URL 복원·접힌 분기 펼치기용
   ancestors(docId: string): string[]
+  // 트리에서 이 글 아래 한 칸 들여 그린 갈래들 (본줄기 빼고). 접기·브레드크럼이 쓴다
+  sides(docId: string): string[]
 }
 
 const time = (iso: string) => Date.parse(iso) || 0
@@ -89,6 +94,7 @@ export function buildGraphIndex(graph: Graph): GraphIndex {
   for (const list of nextOf.values()) list.sort(compareSiblings)
 
   const trees = new Map<string, CollectionTree>()
+  const sidesOf = new Map<string, string[]>()
 
   function buildTree(collectionId: string): CollectionTree {
     const collection = collectionsById.get(collectionId)
@@ -100,20 +106,27 @@ export function buildGraphIndex(graph: Graph): GraphIndex {
       if (visited.has(doc.id)) return
       visited.add(doc.id)
       const children = (nextOf.get(doc.id) ?? []).filter((c) => inCollection.has(c.id) && !visited.has(c.id))
+      const plain = children.filter((c) => !c.branch)
+      // 본줄기 = 태그 없는 갈래가 딱 하나일 때 그것 (자식 1개도 같은 규칙: 태그가 없으면 본줄기, 있으면 곁가지)
+      const main = plain.length === 1 ? plain[0] : null
+      const sides = children.filter((c) => c !== main)
+      if (sides.length) sidesOf.set(doc.id, sides.map((c) => c.id))
       out.push({
         docId: doc.id,
         guides,
         branch,
         depth: guides.length + (branch === 'none' ? 0 : 1),
         forks: children.length,
+        sides: sides.length,
         root: false,
         continuesFrom: null,
         orphan: null,
         ...head,
       })
       const next = branch === 'mid' ? [...guides, true] : branch === 'last' ? [...guides, false] : guides
-      if (children.length === 1) walk(children[0], out, next, 'none')
-      else children.forEach((c, i) => walk(c, out, next, i === children.length - 1 ? 'last' : 'mid'))
+      // 곁가지 먼저 (본줄기가 아래로 이어지면 세로선도 이어지니 전부 ├─), 그다음 본줄기는 같은 깊이로
+      sides.forEach((c, i) => walk(c, out, next, main || i < sides.length - 1 ? 'mid' : 'last'))
+      if (main) walk(main, out, next, 'none')
     }
 
     const manifest = collection?.manifestId ? docsById.get(collection.manifestId) : undefined
@@ -137,7 +150,7 @@ export function buildGraphIndex(graph: Graph): GraphIndex {
       const out: TreeRow[] = []
       if (flat) {
         visited.add(head.id)
-        out.push({ docId: head.id, guides: [], branch: 'none', depth: 0, forks: 0, root: true, continuesFrom: null, orphan: reason })
+        out.push({ docId: head.id, guides: [], branch: 'none', depth: 0, forks: 0, sides: 0, root: true, continuesFrom: null, orphan: reason })
       } else walk(head, out, [], 'none', { root: true, orphan: reason })
       if (out.length) groups.push({ head, rows: out })
     }
@@ -193,6 +206,11 @@ export function buildGraphIndex(graph: Graph): GraphIndex {
         cur = prevOf.get(cur)
       }
       return chain
+    },
+    sides(docId) {
+      const collectionId = docsById.get(docId)?.collectionId
+      if (collectionId !== undefined && !trees.has(collectionId)) this.tree(collectionId)
+      return sidesOf.get(docId) ?? []
     },
   }
 }

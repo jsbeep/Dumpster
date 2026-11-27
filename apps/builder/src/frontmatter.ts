@@ -28,7 +28,8 @@ export function splitFrontmatter(raw: string): SplitResult {
 
 export interface DocMeta {
   oid: string | null // 소문자. 없거나 형식이 이상하면 null (빌더가 임시 ID를 씀)
-  draft: boolean // 태그 'draft' → 비공개와 똑같이 취급
+  draft: boolean // 태그 '_draft' → 비공개와 똑같이 취급 (옛 'draft'도 경고와 함께 숨김)
+  branchTag: boolean // 태그 '_branch' → 트리에서 곁가지 (한 칸 들여씀, 본줄기는 태그 없는 갈래)
   kind: DocKind
   prev: string | null // [[ ]] 안의 대상 이름
   branch: string[]
@@ -75,6 +76,9 @@ function normalizeOid(value: unknown, warn: (msg: string) => void): string | nul
   return null
 }
 
+// 유출 검사(leak.ts)는 일부러 따로 판정한다 — draft 태그 이름을 바꾸면 거기도
+export const SYSTEM_TAGS = ['_draft', '_branch']
+
 export function normalizeMeta(data: Record<string, unknown> | null, warn: (msg: string) => void): DocMeta {
   const d = data ?? {}
 
@@ -86,12 +90,18 @@ export function normalizeMeta(data: Record<string, unknown> | null, warn: (msg: 
   if (prevs.length > 1) warn(`prev가 ${prevs.length}개 — 첫 번째(${prevs[0]})만 씀`)
   const links = (key: string) => uniq(toList(d[key]).map(linkTarget).filter((t): t is string => !!t))
 
-  const tags = uniq(
+  const allTags = uniq(
     toList(d.tags)
       .flatMap((t) => (typeof t === 'string' ? t.split(/[,\s]+/) : []))
       .map((t) => t.replace(/^#+/, '').trim())
       .filter(Boolean),
   )
+  // '_'로 시작하는 태그 = 빌더에 주는 표시 (공개 태그 목록엔 안 나감)
+  const system = new Set(allTags.filter((t) => t.startsWith('_')).map((t) => t.toLowerCase()))
+  for (const t of system) if (!SYSTEM_TAGS.includes(t)) warn(`모르는 시스템 태그 '${t}' → 무시 (${SYSTEM_TAGS.join(' · ')})`)
+  const legacyDraft = allTags.some((t) => t.toLowerCase() === 'draft')
+  if (legacyDraft) warn(`태그 'draft' → '_draft'로 바꾸세요 (지금은 그래도 숨김)`)
+  const tags = allTags.filter((t) => !t.startsWith('_'))
   const aliases = uniq(
     toList(d.aliases)
       .filter((a): a is string => typeof a === 'string')
@@ -109,7 +119,8 @@ export function normalizeMeta(data: Record<string, unknown> | null, warn: (msg: 
 
   return {
     oid: normalizeOid(d.oid, warn),
-    draft: tags.some((t) => t.toLowerCase() === 'draft'),
+    draft: system.has('_draft') || legacyDraft,
+    branchTag: system.has('_branch'),
     kind,
     prev: prevs[0] ?? null,
     branch: links('branch'),

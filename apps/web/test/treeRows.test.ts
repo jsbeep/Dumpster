@@ -83,3 +83,49 @@ describe('브레드크럼 — 거쳐 온 분기점', () => {
     if (s2) expect(forkTrail(ix, s2.id).every((a) => ix.docsById.get(a)?.collectionId === s2.collectionId)).toBe(true)
   })
 })
+
+describe('곁가지 태그 _branch — 접기·브레드크럼은 곁가지만', () => {
+  // M → A ┬ S(_branch) → S2
+  //       └ B (본줄기) → C
+  const mk = (id: string, branch = false) => ({
+    id, title: id, aliases: [], collectionId: 'c', kind: 'doc' as const, order: null, tags: [], description: null,
+    createdAt: '2026-11-28T00:00:00+09:00', updatedAt: '2026-11-28T00:00:00+09:00', blocks: [], sections: [],
+    ...(branch ? { branch: true as const } : {}),
+  })
+  const p = (s: string, t: string) => ({ id: `${s}->${t}:prev`, source: s, target: t, targetLabel: t, relation: 'prev' as const, origin: 'frontmatter' as const })
+  const ix2 = buildGraphIndex({
+    ...graph,
+    collections: [{ id: 'c', path: ['c'], title: 'c', manifestId: 'M', description: null, tags: [] }],
+    docs: [{ ...mk('M'), kind: 'manifest' }, mk('A'), mk('S', true), mk('S2'), mk('B'), mk('C')],
+    edges: [p('A', 'M'), p('S', 'A'), p('S2', 'S'), p('B', 'A'), p('C', 'B')],
+  })
+  const v = (main: string): View => ({ main, tabs: [], active: 0, collapsed: null })
+  const ids = (t: { rows: { docId: string }[] }) => t.rows.map((r) => r.docId)
+
+  it('접으면 곁가지만 숨고 본줄기는 남는다', () => {
+    expect(ids(shownTree(ix2, 'c', v('M'), []))).toEqual(['M', 'A', 'S', 'S2', 'B', 'C'])
+    expect(ids(shownTree(ix2, 'c', v('M'), ['A']))).toEqual(['M', 'A', 'B', 'C'])
+  })
+
+  it('본줄기 글을 보고 있어도 접을 수 있다 · 곁가지 안 글을 보면 못 접는다', () => {
+    expect(shownTree(ix2, 'c', v('C'), ['A']).folded.has('A')).toBe(true)
+    const t = shownTree(ix2, 'c', v('S2'), ['A'])
+    expect(t.pinned.has('A')).toBe(true)
+    expect(t.folded.has('A')).toBe(false)
+  })
+
+  it('곁가지 없는 글은 접기 목록에 있어도 무시', () => {
+    expect(shownTree(ix2, 'c', v('M'), ['B']).folded.size).toBe(0)
+  })
+
+  it('브레드크럼 = 곁가지로 들어간 분기점만', () => {
+    expect(forkTrail(ix2, 'S2')).toEqual(['A'])
+    expect(forkTrail(ix2, 'C')).toEqual([])
+  })
+
+  it('j/k는 보이는 순서대로 (곁가지 먼저, 본줄기 다음)', () => {
+    expect(stepRow(ix2, v('A'), {}, 'A', 1)).toBe('S')
+    expect(stepRow(ix2, v('S2'), {}, 'S2', 1)).toBe('B')
+    expect(stepRow(ix2, v('M'), { c: ['A'] }, 'A', 1)).toBe('B')
+  })
+})

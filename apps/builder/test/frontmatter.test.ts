@@ -50,6 +50,7 @@ describe('normalizeMeta', () => {
     expect(normalizeMeta({ prev: null, tags: null, aliases: null, description: null }, (w) => warnings.push(w))).toEqual({
       oid: null,
       draft: false,
+      branchTag: false,
       kind: 'doc',
       prev: null,
       branch: [],
@@ -84,9 +85,21 @@ describe('normalizeMeta', () => {
     expect(warnings).toHaveLength(warnCount)
   })
 
-  it('태그 draft(대소문자·# 무관)면 draft', () => {
-    expect(normalizeMeta({ tags: ['#Draft', '홈서버'] }, () => {}).draft).toBe(true)
-    expect(normalizeMeta({ tags: ['drafts'] }, () => {}).draft).toBe(false)
+  it('태그 _draft(대소문자·# 무관)면 draft, 옛 draft도 숨기되 경고', () => {
+    const warnings: string[] = []
+    expect(normalizeMeta({ tags: ['#_Draft', '홈서버'] }, (w) => warnings.push(w)).draft).toBe(true)
+    expect(warnings).toEqual([])
+    expect(normalizeMeta({ tags: ['#Draft'] }, (w) => warnings.push(w)).draft).toBe(true)
+    expect(warnings).toEqual(["태그 'draft' → '_draft'로 바꾸세요 (지금은 그래도 숨김)"])
+    expect(normalizeMeta({ tags: ['drafts', '_drafts'] }, () => {}).draft).toBe(false)
+  })
+
+  it('태그 _branch면 곁가지, _ 태그는 공개 태그에서 빠지고 모르는 건 경고', () => {
+    const warnings: string[] = []
+    const meta = normalizeMeta({ tags: ['_branch', '설계', '_brnach'] }, (w) => warnings.push(w))
+    expect(meta).toMatchObject({ branchTag: true, draft: false, tags: ['설계'] })
+    expect(warnings).toEqual(["모르는 시스템 태그 '_brnach' → 무시 (_draft · _branch)"])
+    expect(normalizeMeta({ tags: 'a, _branch' }, () => {}).branchTag).toBe(true)
   })
 
   it('prev가 여러 개면 첫 번째 + 경고, 모르는 type은 doc + 경고', () => {

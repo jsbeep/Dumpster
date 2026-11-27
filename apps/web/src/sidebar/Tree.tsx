@@ -2,8 +2,8 @@ import { cx } from '@dumpster/blocks'
 import type { GraphIndex, TreeRow } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, CornerUpLeft } from 'lucide-react'
-import { descendants, type LinkMark } from '../core/links'
-import { shownTree } from '../core/treeRows'
+import type { LinkMark } from '../core/links'
+import { foldedAway, shownTree } from '../core/treeRows'
 import { collapseNow, collapseY } from '../ui/motion'
 import { DocLink } from '../ui/DocLink'
 import { dotClass, type DotShape, type DotState } from '../ui/dots'
@@ -64,7 +64,7 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen,
     const isFolded = folded.has(r.docId)
     const isHl = hl.includes(r.docId)
     const up = r.branch === 'none' && !r.root
-    const down = r.forks > 0 && !isFolded
+    const down = r.forks > (isFolded ? r.sides : 0) // 곁가지를 접어도 본줄기가 있으면 선이 이어진다
     const mk = marks.get(r.docId)
     const from = r.continuesFrom ? ix.docsById.get(r.continuesFrom) : undefined
     const fromCol = from && ix.collectionsById.get(from.collectionId)
@@ -123,7 +123,7 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen,
               <ArrowUpRight size={13} aria-hidden />
             </span>
           )}
-          {r.forks > 1 && !pinned.has(r.docId) && (
+          {r.sides > 0 && !pinned.has(r.docId) && (
             <button
               type="button"
               className={styles.fold}
@@ -132,7 +132,7 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen,
               data-fold
               data-tt={isFolded ? '갈래 펼치기' : '갈래 접기'}
             >
-              {isFolded && `+${descendants(ix, r.docId).length}`}
+              {isFolded && `+${foldedAway(ix, r.docId).length}`}
               {isFolded ? <ChevronRight size={14} aria-hidden /> : <ChevronDown size={14} aria-hidden />}
             </button>
           )}

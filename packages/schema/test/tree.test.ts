@@ -103,6 +103,94 @@ describe('트리 인덱스 — 짜가 볼트 밖의 경우', () => {
   })
 })
 
+describe('곁가지 태그 _branch (Doc.branch) — 본줄기는 같은 깊이로', () => {
+  // 사용자 스크린샷의 병 합 컬렉션 모양: 분기점마다 한 칸짜리 곁가지 하나 + 이어지는 본줄기
+  const B = { branch: true } as const
+  const index = buildGraphIndex(
+    graphOf(
+      [
+        makeDoc('M', { kind: 'manifest' }),
+        makeDoc('낯선'),
+        makeDoc('인증서', B),
+        makeDoc('다듬기'),
+        makeDoc('연결'),
+        makeDoc('Skills', B),
+        makeDoc('모니터링'),
+        makeDoc('서버'),
+        makeDoc('대왕'),
+        makeDoc('문서', B),
+      ],
+      [
+        prev('낯선', 'M'),
+        prev('인증서', '낯선'),
+        prev('다듬기', '낯선'),
+        prev('연결', '다듬기'),
+        prev('Skills', '연결'),
+        prev('모니터링', '연결'),
+        prev('서버', '모니터링'),
+        prev('대왕', '서버'),
+        prev('문서', '모니터링'),
+      ],
+      'M',
+    ),
+  )
+
+  it('곁가지만 한 칸, 본줄기는 안 밀린다 (곁가지가 먼저, 전부 ├─)', () => {
+    expect(treeToText(index, 'c')).toBe(
+      ['● M', '● 낯선', '├─● 인증서', '● 다듬기', '● 연결', '├─● Skills', '● 모니터링', '├─● 문서', '● 서버', '● 대왕'].join('\n'),
+    )
+    expect(index.tree('c').rows.map((r) => r.depth)).toEqual([0, 0, 1, 0, 0, 1, 0, 1, 0, 0])
+  })
+
+  it('sides — 들여 그린 갈래만 (본줄기 빼고)', () => {
+    expect(index.sides('낯선')).toEqual(['인증서'])
+    expect(index.sides('모니터링')).toEqual(['문서'])
+    expect(index.sides('다듬기')).toEqual([])
+    expect(index.tree('c').rows.find((r) => r.docId === '연결')).toMatchObject({ forks: 2, sides: 1 })
+  })
+
+  it('태그 없는 갈래가 2개 이상이면 본줄기를 몰라 전부 들여씀 (태그 단 건 그 앞에 없어도 순서대로)', () => {
+    const ix = buildGraphIndex(
+      graphOf(
+        [makeDoc('M', { kind: 'manifest' }), makeDoc('A'), makeDoc('B', B), makeDoc('C'), makeDoc('C2')],
+        [prev('A', 'M'), prev('B', 'M'), prev('C', 'M'), prev('C2', 'C')],
+        'M',
+      ),
+    )
+    expect(treeToText(ix, 'c')).toBe(['● M', '├─● A', '├─● B', '└─● C', '  ● C2'].join('\n'))
+    expect(ix.sides('M')).toEqual(['A', 'B', 'C'])
+  })
+
+  it('갈래가 전부 태그면 전부 들여씀, 하나뿐인 다음 글도 태그면 곁가지', () => {
+    const ix = buildGraphIndex(
+      graphOf(
+        [makeDoc('M', { kind: 'manifest' }), makeDoc('A', B), makeDoc('A1', B), makeDoc('A2')],
+        [prev('A', 'M'), prev('A1', 'A'), prev('A2', 'A1')],
+        'M',
+      ),
+    )
+    expect(treeToText(ix, 'c')).toBe(['● M', '└─● A', '  └─● A1', '    ● A2'].join('\n'))
+  })
+
+  it('곁가지 아래 이어지는 글은 본줄기 세로선(│) 안쪽에', () => {
+    const ix = buildGraphIndex(
+      graphOf(
+        [makeDoc('M', { kind: 'manifest' }), makeDoc('S', B), makeDoc('S2'), makeDoc('N')],
+        [prev('S', 'M'), prev('S2', 'S'), prev('N', 'M')],
+        'M',
+      ),
+    )
+    expect(treeToText(ix, 'c')).toBe(['● M', '├─● S', '│ ● S2', '● N'].join('\n'))
+  })
+
+  it('태그가 하나도 없으면 예전과 똑같다', () => {
+    const ix = buildGraphIndex(
+      graphOf([makeDoc('M', { kind: 'manifest' }), makeDoc('A'), makeDoc('B'), makeDoc('B2')], [prev('A', 'M'), prev('B', 'M'), prev('B2', 'B')], 'M'),
+    )
+    expect(treeToText(ix, 'c')).toBe(['● M', '├─● A', '└─● B', '  ● B2'].join('\n'))
+  })
+})
+
 describe('형제 정렬 order → createdAt → 이름', () => {
   it('order 있는 글이 먼저, lexorank는 바이트 순서', () => {
     const docs = [makeDoc('없음'), makeDoc('b', { order: 'b' }), makeDoc('am', { order: 'am' }), makeDoc('a', { order: 'a' })]

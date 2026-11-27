@@ -33,7 +33,8 @@ export interface Doc {
   collectionId: string
   kind: DocKind
   order: string | null // lexorank. 형제 정렬에 쓴다
-  tags: string[]
+  tags: string[] // '_'로 시작하는 시스템 태그는 빠진다
+  branch?: true // 태그 _branch — 트리에서 곁가지로 한 칸 들여씀 (없으면 키도 없음, 스키마 버전 그대로)
   description: string | null
   createdAt: string // ISO +09:00. frontmatter → git 첫 커밋 → 파일 mtime 순으로 채움
   updatedAt: string // ISO. git 마지막 커밋 → mtime

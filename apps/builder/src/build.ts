@@ -34,7 +34,7 @@ export interface BuildReport {
   privateRefs: string[] // '고정 IP 설정 → [[통장 비번]] (see_also)'
   missingRefs: string[]
   missingFolders: string[]
-  drafts: { relPath: string; id: string }[] // 태그 draft로 숨긴 글 (id는 빌드 비교 때 "draft로 숨김" 표시용)
+  drafts: { relPath: string; id: string }[] // 태그 _draft로 숨긴 글 (id는 빌드 비교 때 "draft로 숨김" 표시용)
 }
 
 export interface BuildResult {
@@ -113,6 +113,7 @@ export function buildGraph(opts: BuildOptions): BuildResult {
         kind: meta.kind,
         order: meta.order,
         tags: meta.tags,
+        ...(meta.branchTag ? { branch: true as const } : {}),
         description: meta.description,
         createdAt,
         updatedAt: dirty.has(note.relPath) || !fileDates ? note.mtime : fileDates.updated,

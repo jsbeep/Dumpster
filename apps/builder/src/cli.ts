@@ -86,7 +86,7 @@ section('⏭ 건너뜀', report.skipped.map((s) => `${s.relPath} (${s.reason})`)
 section('🔒 비공개 문서를 가리키는 링크 (결과물엔 없는 문서로 나감)', report.privateRefs)
 section('❓ 없는 문서를 가리키는 링크', report.missingRefs)
 section('📁 공개 목록에 있지만 없는 폴더', report.missingFolders)
-section('📝 draft (태그로 숨김)', report.drafts.map((d) => d.relPath))
+section('📝 draft (태그 _draft로 숨김)', report.drafts.map((d) => d.relPath))
 
 // 요약 한 줄 + 트리에 자리가 없는 🗑 사라진 글만 목록으로
 if (diff.first) {

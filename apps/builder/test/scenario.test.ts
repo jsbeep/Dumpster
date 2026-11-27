@@ -183,9 +183,9 @@ describe('빌드 간 시나리오', () => {
     expect(diffGraphs(g1, g2).changed).toEqual([{ id: OID.C, title: 'C', collectionId: '일지', what: ['속성'] }])
   })
 
-  it('13. draft 태그: 달면 사라지고(리포트엔 draft), 떼면 같은 ID로 돌아온다', () => {
+  it('13. _draft 태그: 달면 사라지고(리포트엔 draft), 떼면 같은 ID로 돌아온다', () => {
     const g1 = build().graph
-    write('C', { tags: ['draft'] })
+    write('C', { tags: ['_draft'] })
     commit()
     const r2 = build()
     expect(titles(diffGraphs(g1, r2.graph).removed)).toEqual(['C'])
