@@ -42,8 +42,8 @@ const styles = {
   collRow: 'group flex h-8 max-[720px]:h-9 w-full shrink-0 items-center gap-1.5 rounded-md pr-1 text-left text-[13px] transition-colors hover:bg-side-hover',
   collBtn: 'flex min-w-0 flex-1 items-center gap-1.5 self-stretch pl-0.5 text-left',
   collLabel: 'min-w-0 truncate font-semibold', // 글자 폭만 — 바로 뒤에 이어읽기 점 (누르는 영역은 collBtn 전체)
-  // 이어읽는 글(흐름 칸)이 있는 컬렉션 — 트리의 흐름 글 점과 같은 강조색 (건너읽기 탭은 안 찍음, 11-27 사용자)
-  flowDot: 'h-1.5 w-1.5 shrink-0 rounded-full bg-accent-600',
+  // 이어읽는 글(흐름 칸)이 있는 컬렉션 — 은은한 회색 점 (건너읽기 탭은 안 찍음, 11-27 사용자)
+  flowDot: 'h-1.5 w-1.5 shrink-0 rounded-full bg-slate-400',
   count: 'shrink-0 pr-1 font-mono text-[11px] tabular-nums text-slate-400',
   mark: 'rounded-sm bg-amber-100 text-inherit',
   kbd: 'pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-line px-1.5 font-mono text-[10px] leading-4 text-slate-400 peer-focus:hidden',
