@@ -7,3 +7,4 @@ out/
 .claude/worktrees/
 apps/playground/.draft/
 docs/design.md
+apps/web/e2e/
