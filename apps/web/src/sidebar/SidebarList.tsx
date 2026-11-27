@@ -100,18 +100,21 @@ export function SidebarList(p: Props) {
   const marks = useMemo(() => linkMarks(ix, p.focusDoc), [ix, p.focusDoc])
   const colls = collectionTree(ix)
   const count = (cid: string) => colls.total.get(cid) ?? 0
+  // 트리는 10px 들여 — 컬렉션 화살표와 트리 점이 같은 x면 글이 컬렉션 옆 형제처럼 보였다 (11-28)
   const tree = (cid: string) => (
-    <Tree
-      ix={ix}
-      collectionId={cid}
-      view={view}
-      marks={marks}
-      hl={p.hl}
-      folds={list.folds[cid] ?? []}
-      onFold={(id) => list.toggleFold(cid, id)}
-      onOpen={p.onPick}
-      still={p.phone}
-    />
+    <div className="pl-2.5">
+      <Tree
+        ix={ix}
+        collectionId={cid}
+        view={view}
+        marks={marks}
+        hl={p.hl}
+        folds={list.folds[cid] ?? []}
+        onFold={(id) => list.toggleFold(cid, id)}
+        onOpen={p.onPick}
+        still={p.phone}
+      />
+    </div>
   )
 
   let body: ReactNode
@@ -167,7 +170,7 @@ export function SidebarList(p: Props) {
     // 접힌 줄엔 이어읽는 글이 그 아래(하위 컬렉션 포함)에 있으면 점
     const kidsOf = (cid: string) => {
       const kids = colls.kids.get(cid)
-      return kids?.length ? <div className="pl-3.5">{kids.map(collection)}</div> : null
+      return kids?.length ? <div className="pl-2.5">{kids.map(collection)}</div> : null
     }
     function collection(c: Collection): ReactNode {
       const isOpen = list.open.has(c.id)
