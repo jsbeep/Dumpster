@@ -105,6 +105,19 @@ function snippetOf(full: string, start: number, end: number): Snippet {
 
 export const bodySearchable = (query: string) => foldQuery(query).length >= BODY_MIN
 
+// 칸 안 찾기(pane/Find)용 — 원문에서 찾은 자리 [시작, 끝) 목록. 사이드바 찾기와 같은 규칙(띄어쓰기·대소문자 무시)이라
+// 사이드바에서 찾은 검색어를 그대로 넘겨도 걸린다. 덩어리(문단·항목) 경계는 부르는 쪽이 공백 아닌 글자(FIND_SEP)로
+// 끼워 넘긴다 — 검색어엔 없는 글자라 경계를 넘는 일치가 안 생긴다
+export const FIND_SEP = '\u0000'
+export function matchSpans(text: string, query: string, max = Infinity): [number, number][] {
+  const q = foldQuery(query)
+  if (!q) return []
+  const { norm, at } = fold(text)
+  const out: [number, number][] = []
+  for (let i = norm.indexOf(q); i >= 0 && out.length < max; i = norm.indexOf(q, i + q.length)) out.push([at[i], at[i + q.length - 1] + 1])
+  return out
+}
+
 export function searchBody(ix: GraphIndex, corpus: Corpus, query: string, skip: ReadonlySet<string> = new Set(), limit = 30): BodyHit[] {
   const q = foldQuery(query)
   if (q.length < BODY_MIN) return []

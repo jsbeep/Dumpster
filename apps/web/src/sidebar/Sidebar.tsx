@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Store } from '../core/data'
 import { stepRow } from '../core/treeRows'
 import type { View } from '../core/view'
+import type { Land } from '../hooks/useView'
 import { isTyping, useKeyDown } from '../hooks/useKeys'
 import { QUICK } from '../ui/motion'
 import { PullHandle } from './PullHandle'
@@ -48,7 +49,7 @@ interface Props {
   focusDoc: string | null
   hl: (string | null)[]
   reveal: RevealRequest | null
-  onOpen: (docId: string, anchor?: string) => void // anchor = 본문 찾기에서 걸린 헤딩
+  onOpen: (docId: string, land?: Land) => void // 찾기 결과에서 고른 글이면 land(검색어 · 본문에서 걸린 헤딩)
   onScan: (docId: string) => void // j/k — 흐름 칸 교체, 기록 덮어씀
   onHome: () => void
 }
@@ -121,8 +122,8 @@ export function Sidebar(p: Props) {
   }, [dragging, dockedMode, animating])
 
   // 떠 있는 화면에서 글을 고르면 떠 있던 목록은 레일로
-  const pick = (id: string, anchor?: string) => {
-    p.onOpen(id, anchor)
+  const pick = (id: string, land?: Land) => {
+    p.onOpen(id, land)
     if (overlayOpen) setMode('rail')
   }
   const home = () => {

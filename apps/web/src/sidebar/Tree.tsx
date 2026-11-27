@@ -108,8 +108,8 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
             </DocLink>
           )}
           {isAct && (
-            <span className={styles.badge} data-badge data-tt="연관 칸에 펼친 글">
-              연관
+            <span className={styles.badge} data-badge data-tt="건너읽기 칸에 펼친 글">
+              건너읽기
             </span>
           )}
           {mk?.in && (

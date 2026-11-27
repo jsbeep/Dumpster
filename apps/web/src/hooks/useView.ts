@@ -9,7 +9,7 @@ import { forget, saveNow, seed, type ScrollMap } from './scrollMemory'
 //   view : 기록에 들어가는 칸 상태 (history.state.view, 주소엔 흐름 글 + 펼친 탭만)
 //   slot : 지금 보는 칸 — 사이드바 컬렉션·트리 ↙/↗의 기준. 기록 밖 state지만 뒤로가기 때 같이 돌아오게 history.state에도 적는다
 //   flash: 이미 보이는 글로 가려 할 때 그 칸만 반짝
-//   pending: 헤딩 링크([[글#헤딩]]) → 그 글이 놓인 칸에서 헤딩까지 스크롤
+//   pending: 글이 칸에 놓인 뒤 할 일(Land) — 그 글이 놓인 칸이 본문을 받은 뒤 한 번만 (pane/useScroll useLanding)
 //   dir  : 새 글이 칸에 들어오는 방향 (1 = 오른쪽에서, -1 = 왼쪽에서, 0 = 제자리) — 칸 애니메이션용
 // 기록 한 칸 = { view, slot, scroll } — scroll은 그 기록에서 보이던 글들의 칸 안 자리 (hooks/scrollMemory).
 //   새 기록을 쌓기 직전에 지금 기록의 scroll을 적고, 처음 여는 글의 기억은 지운다(맨 위부터).
@@ -19,8 +19,14 @@ export interface Pulse {
   slot: Slot
   n: number // 같은 칸이 또 반짝일 때도 바뀌게 (key로 써서 애니메이션을 다시 튼다)
 }
-export interface PendingHeading extends Pulse {
-  anchor: string
+// 글을 연 뒤 칸 안에서 할 일 — dispatch의 두 번째 인자
+export interface Land {
+  anchor?: string // 그 헤딩까지 (헤딩 링크 [[글#헤딩]] · 사이드바 본문 찾기)
+  find?: string // 칸 안 찾기를 이 검색어로 켬 (사이드바 찾기칸에서 고른 글)
+  linkTo?: string // 이 글을 가리키는 블록까지 + 잠깐 칠함 (글 끝 '이 글을 가리키는 글')
+}
+export interface Landing extends Pulse, Land {
+  doc: string // 그 칸에 놓인 글 — 같은 칸의 나가는 칸(다른 글)은 안 받는다
 }
 
 export interface Dir {
@@ -76,7 +82,7 @@ export function useView(store: Store) {
   })
   const [slot, setSlot] = useState<Slot>(() => savedSlot(view))
   const [flash, setFlash] = useState<Pulse | null>(null)
-  const [pending, setPending] = useState<PendingHeading | null>(null)
+  const [pending, setPending] = useState<Landing | null>(null)
   const [dir, setDir] = useState<Dir>(STILL)
 
   // 핸들러가 옛 view를 붙잡지 않게 — dispatch는 한 번만 만들고 최신 값은 ref에서 읽는다
@@ -126,7 +132,7 @@ export function useView(store: Store) {
     return () => clearTimeout(t)
   }, [flash])
 
-  const dispatch = useCallback((action: Action, anchor?: string) => {
+  const dispatch = useCallback((action: Action, land?: Land) => {
     const before = viewRef.current
     const r = reduce(before, action)
     const v = r.view
@@ -146,7 +152,8 @@ export function useView(store: Store) {
     setView(v)
     setSlot(s)
     if (r.flash) setFlash({ slot: r.flash, n: ++pulseN })
-    if (anchor && r.slot) setPending({ slot: r.slot, anchor, n: ++pulseN })
+    const doc = r.slot === 'main' ? v.main : r.slot === 'rel' ? activeOf(v) : null
+    if (land && r.slot && doc) setPending({ ...land, slot: r.slot, doc, n: ++pulseN })
   }, [store])
 
   // 칸을 누르면 그 칸이 지금 보는 칸 (기록은 안 쌓고 지금 기록의 slot만 고친다)

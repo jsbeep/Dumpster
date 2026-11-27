@@ -117,8 +117,8 @@ export function Explorer({ store }: { store: Store }) {
           focusDoc={focusDoc}
           hl={[hover, rowFlash]}
           reveal={reveal}
-          onOpen={(id, anchor) => {
-            dispatch({ type: 'open', id }, anchor)
+          onOpen={(id, land) => {
+            dispatch({ type: 'open', id }, land)
             setDrawer(false)
           }}
           onScan={(id) => dispatch({ type: 'open', id, scan: true })}

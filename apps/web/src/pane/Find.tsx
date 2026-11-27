@@ -1,12 +1,14 @@
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
+import { FIND_SEP, matchSpans } from '../core/search'
 import type { Slot } from '../core/view'
 import { useKeyDown } from '../hooks/useKeys'
 import { IconButton } from '../ui/IconButton'
 
 // 칸 안 찾기 (11-27) — 펼친 글 하나에서만 찾는다. 브라우저 Ctrl+F는 두 칸·사이드바를 한꺼번에 뒤진다
 //   열기: 칸 머리 돋보기, 또는 지금 보는 칸에서 Ctrl/⌘+F (찾기 칸에 글자 커서가 있을 때 한 번 더 누르면 브라우저 찾기)
-//   Enter = 다음, Shift+Enter = 이전, Esc = 닫기. 대소문자 무시, 문단·항목 경계는 넘지 않는다
+//   사이드바 찾기칸에서 고른 글은 그 검색어로 켜진 채 열린다(글자 커서는 안 넣음 — 폰 키보드·j/k). 본문에서 찾았으면 그 헤딩 아래 첫 일치부터
+//   Enter = 다음, Shift+Enter = 이전, Esc = 닫기. 사이드바 찾기와 같은 규칙(띄어쓰기·대소문자 무시, core/search matchSpans), 문단·항목 경계는 넘지 않는다
 //   찾는 곳: 제목 + 본문 블록. 컬렉션 이름·날짜 줄·글 끝(이전/다음·연결 목록)·버튼 글자는 뺀다 (data-nofind, footer, button)
 // 칠하기는 CSS Custom Highlight API — 본문 DOM(React가 그린 것)은 그대로 두고 Range만 등록한다.
 //   <mark>로 감싸면 React가 모르는 노드가 생겨 다음 그리기에서 깨진다. 이름이 칸마다 따로(find-main / find-rel) — index.css
@@ -20,7 +22,7 @@ interface Seg {
   start: number // 이어 붙인 글자에서 이 글자 조각이 시작하는 자리
 }
 
-// 본문 글자 조각을 차례로 이어 붙인다. 글 덩어리(문단·항목·칸…)가 바뀌면 '\n'을 끼워 경계를 넘는 일치를 막는다
+// 본문 글자 조각을 차례로 이어 붙인다. 글 덩어리(문단·항목·칸…)가 바뀌면 FIND_SEP을 끼워 경계를 넘는 일치를 막는다
 function textIndex(root: HTMLElement): { text: string; segs: Seg[] } {
   const segs: Seg[] = []
   let text = ''
@@ -34,7 +36,7 @@ function textIndex(root: HTMLElement): { text: string; segs: Seg[] } {
   for (let n = walker.nextNode(); n; n = walker.nextNode()) {
     let b: Element | null = n.parentElement
     while (b && b !== root && !BLOCK.has(b.tagName)) b = b.parentElement
-    if (b !== last && text) text += '\n'
+    if (b !== last && text) text += FIND_SEP
     last = b
     segs.push({ node: n as Text, start: text.length })
     text += n.nodeValue
@@ -46,13 +48,6 @@ export function findRanges(root: HTMLElement, query: string): Range[] {
   if (!query) return []
   const { text, segs } = textIndex(root)
   if (!segs.length) return []
-  // 대소문자를 바꾸면 길이가 달라지는 글자가 섞여 있으면(드묾) 자리가 어긋나니 그대로 비교
-  let hay = text.toLowerCase()
-  let needle = query.toLowerCase()
-  if (hay.length !== text.length || needle.length !== query.length) {
-    hay = text
-    needle = query
-  }
   // 그 자리를 품은 조각: start ≤ i 인 마지막 조각 (끝 자리는 start < i)
   const segAt = (i: number, end: boolean) => {
     let lo = 0
@@ -64,16 +59,14 @@ export function findRanges(root: HTMLElement, query: string): Range[] {
     }
     return segs[lo]
   }
-  const out: Range[] = []
-  for (let i = hay.indexOf(needle); i >= 0 && out.length < MAX; i = hay.indexOf(needle, i + needle.length)) {
+  return matchSpans(text, query, MAX).map(([i, j]) => {
     const a = segAt(i, false)
-    const b = segAt(i + needle.length, true)
+    const b = segAt(j, true)
     const r = document.createRange()
     r.setStart(a.node, i - a.start)
-    r.setEnd(b.node, i + needle.length - b.start)
-    out.push(r)
-  }
-  return out
+    r.setEnd(b.node, j - b.start)
+    return r
+  })
 }
 
 // 지금 보이는 곳부터 — 화면 위쪽 끝 아래에 있는 첫 일치 (없으면 처음)
@@ -117,20 +110,22 @@ interface Props {
   rootRef: RefObject<HTMLElement>
   scrollRef: RefObject<HTMLElement>
   ready: unknown // 본문이 바뀌면(받아 옴) 다시 찾는다
-  focusN: number // 늘어날 때마다 찾기 칸에 글자 커서 + 전체 선택
+  seed: FindSeed // 열 때마다 새 값 — 검색어가 있으면 그걸로, focus면 찾기 칸에 글자 커서 + 전체 선택
   onClose: () => void
 }
 
-export function FindBar({ slot, rootRef, scrollRef, ready, focusN, onClose }: Props) {
+export function FindBar({ slot, rootRef, scrollRef, ready, seed, onClose }: Props) {
   const inputRef = useRef<HTMLInputElement>(null)
-  const [query, setQuery] = useState('')
+  const [query, setQuery] = useState(seed.query ?? '')
   const [ranges, setRanges] = useState<Range[]>([])
   const [cur, setCur] = useState(0)
 
   useEffect(() => {
+    if (seed.query !== undefined) setQuery(seed.query)
+    if (!seed.focus) return
     inputRef.current?.focus()
     inputRef.current?.select()
-  }, [focusN])
+  }, [seed])
 
   useEffect(() => {
     const root = rootRef.current
@@ -201,18 +196,23 @@ export function FindBar({ slot, rootRef, scrollRef, ready, focusN, onClose }: Pr
   )
 }
 
-// 찾기 줄 열고 닫기 — 칸 머리 돋보기, 또는 지금 보는 칸에서 Ctrl/⌘+F.
+// 찾기 줄 열고 닫기 — 칸 머리 돋보기, 지금 보는 칸에서 Ctrl/⌘+F, 사이드바 찾기칸에서 고른 글(검색어 채움·커서 없음).
 // 찾기 칸에 글자 커서가 있으면 그 Ctrl+F는 브라우저에 맡긴다
-//   n: 0 = 닫힘, 그 밖 = 열 때마다 늘어남 (FindBar의 focusN — 찾기 칸에 커서)
+//   seed.n: 0 = 닫힘, 그 밖 = 열 때마다 늘어남
+export interface FindSeed {
+  n: number
+  query?: string // 없으면 칸에 있던 글자 그대로
+  focus: boolean
+}
 export function useFind(focused: boolean, ready: boolean) {
-  const [n, setN] = useState(0)
-  const open = useCallback(() => setN((x) => x + 1), [])
-  const close = useCallback(() => setN(0), [])
+  const [seed, setSeed] = useState<FindSeed>({ n: 0, focus: true })
+  const open = useCallback((query?: string, focus = true) => setSeed((s) => ({ n: s.n + 1, query, focus })), [])
+  const close = useCallback(() => setSeed({ n: 0, focus: true }), [])
   useKeyDown((e) => {
     if (!(e.ctrlKey || e.metaKey) || e.altKey || e.shiftKey || e.key.toLowerCase() !== 'f') return
     if ((document.activeElement as HTMLElement | null)?.dataset.findInput !== undefined) return
     e.preventDefault()
     open()
   }, focused && ready)
-  return { n, open, close }
+  return { seed, open, close }
 }

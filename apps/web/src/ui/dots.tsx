@@ -35,9 +35,9 @@ const LEGEND: { group: string; rows: { key: string; icon: ReactNode; label: stri
   {
     group: '열린 곳',
     rows: [
-      { key: 'sel', icon: <span className={dotClass('idle', 'sel')} />, label: '흐름 칸에 연 글' },
-      { key: 'act', icon: <span className={dotClass('idle', 'act')} />, label: '연관 칸에 펼친 글' },
-      { key: 'open', icon: <span className={dotClass('idle', 'open')} />, label: '연관 탭(띠)에 있는 글' },
+      { key: 'sel', icon: <span className={dotClass('idle', 'sel')} />, label: '이어읽기 칸에 연 글' },
+      { key: 'act', icon: <span className={dotClass('idle', 'act')} />, label: '건너읽기 칸에 펼친 글' },
+      { key: 'open', icon: <span className={dotClass('idle', 'open')} />, label: '접힌 글 (띠에 있음)' },
     ],
   },
   {

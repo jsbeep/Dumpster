@@ -1,7 +1,7 @@
 import { buildGraphIndex, SCHEMA_VERSION, type Doc, type Graph, type TextSection } from '@dumpster/schema'
 import { describe, expect, it } from 'vitest'
 import { createStore } from '../src/core/data'
-import { bodySearchable, prepareCorpus, searchBody } from '../src/core/search'
+import { bodySearchable, FIND_SEP, matchSpans, prepareCorpus, searchBody } from '../src/core/search'
 
 // 본문 찾기 (P4.6b) — 헤딩별 평문 조각을 훑는다
 
@@ -78,5 +78,21 @@ describe('본문 찾기', () => {
   it('store.getSearchText — 지금은 graph.json의 글 그대로', async () => {
     const texts = await createStore(graph).getSearchText()
     expect(texts.map((t) => [t.id, t.sections.length])).toEqual([['a', 2], ['b', 1], ['c', 3]])
+  })
+})
+
+describe('칸 안 찾기 자리 (matchSpans)', () => {
+  const cut = (t: string, q: string) => matchSpans(t, q).map(([a, b]) => t.slice(a, b))
+  it('사이드바와 같은 규칙 — 띄어쓰기·대소문자 무시, 원문 자리로 칠한다', () => {
+    expect(cut('외장 SSD를 달았다. 외장SSD 또', '외장ssd')).toEqual(['외장 SSD', '외장SSD'])
+    expect(cut('Docker 설치 끝', 'docker설 치')).toEqual(['Docker 설치'])
+  })
+  it('덩어리 경계(FIND_SEP)는 넘지 않는다', () => {
+    expect(cut(`용량${FIND_SEP}부족`, '용량부족')).toEqual([])
+    expect(cut(`용량 부족${FIND_SEP}용량부족`, '용량부족')).toEqual(['용량 부족', '용량부족'])
+  })
+  it('빈 검색어·공백뿐이면 없음, max까지만', () => {
+    expect(matchSpans('아무 글', '  ')).toEqual([])
+    expect(matchSpans('aaaa', 'a', 2)).toHaveLength(2)
   })
 })

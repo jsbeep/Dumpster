@@ -44,10 +44,10 @@ export const FlowSpine = forwardRef<HTMLElement, { title: string; z: number; dis
         type="button"
         className="flex h-full w-full flex-col items-center gap-2.5 pt-3 text-slate-500 transition-colors hover:bg-side-hover"
         onClick={() => dispatch({ type: 'expand' })}
-        aria-label="흐름 칸 펼치기"
-        data-tt={`흐름 칸 펼치기 — ${title}`}
+        aria-label="이어읽기 칸 펼치기"
+        data-tt={`이어읽기 칸 펼치기 — ${title}`}
       >
-        <span className="shrink-0 text-[11px] font-bold text-slate-500">흐름</span>
+        <span className="shrink-0 text-[11px] font-bold text-slate-500 [writing-mode:vertical-rl]">이어읽기</span>
         <span className={styles.vtitle} data-spine-title>
           {title}
         </span>
@@ -91,7 +91,7 @@ export const Stack = forwardRef<HTMLElement, StackProps>(function Stack({ ix, vi
   const shown = items.slice(0, MAX_SEG)
   const hidden = items.slice(MAX_SEG)
   return (
-    <m.nav ref={ref} {...motionProps(side === 'left' ? -1 : 1, z)} className={styles.card} aria-label={`${side === 'left' ? '앞쪽' : '뒤쪽'} 연관 탭 (위가 가까운 글)`} data-stack={side}>
+    <m.nav ref={ref} {...motionProps(side === 'left' ? -1 : 1, z)} className={styles.card} aria-label={`${side === 'left' ? '앞쪽' : '뒤쪽'} 건너읽기 탭 (위가 가까운 글)`} data-stack={side}>
       <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
         {/* 띠 사이를 옮겨 가는 탭은 layoutId로 미끄러지기만 — 나가는 쪽을 페이드로 남기면 옮겨 간 쪽과 겹쳐 보인다 */}
         {shown.map((it) => (

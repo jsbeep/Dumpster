@@ -3,7 +3,7 @@ import { m } from 'framer-motion'
 import { forwardRef, useRef } from 'react'
 import type { Store } from '../core/data'
 import type { Action, Slot, View } from '../core/view'
-import type { PendingHeading, Pulse } from '../hooks/useView'
+import type { Land, Landing, Pulse } from '../hooks/useView'
 import { paneVariants, QUICK } from '../ui/motion'
 import { PresenceBoundary } from '../ui/PresenceBoundary'
 import type { Zoom } from '../Lightbox'
@@ -13,12 +13,12 @@ import { PaneHeader } from './PaneHeader'
 import { frame } from './styles'
 import { Toc } from './Toc'
 import { useDoc } from './useDoc'
-import { scrollToAnchor, useHeadingJump, useScrollMemory, useScrollSpy } from './useScroll'
+import { scrollToAnchor, useLanding, useScrollMemory, useScrollSpy } from './useScroll'
 import { useWidthFollow } from './useWidthFollow'
 
 // 칸 하나 — 흐름 칸이든 연관 칸이든 같은 모양 (design.md §3 "칸"). 여기선 조립만 한다:
 //   머리 PaneHeader · 찾기 줄(열었을 때) FindBar · 본문 Article(없으면 Gone) · 오른쪽 위 목차 Toc · 반짝(flash)
-//   글 불러오기 useDoc · 읽던 자리·읽는 위치·헤딩 이동 useScroll · 칸 폭 바뀔 때 본문 따라가기 useWidthFollow
+//   글 불러오기 useDoc · 읽던 자리·읽는 위치·연 뒤 갈 곳(헤딩·가리키는 블록·찾기) useScroll · 칸 폭 바뀔 때 본문 따라가기 useWidthFollow
 // 칸 자체가 AnimatePresence의 직접 자식이라 ref를 넘긴다 (popLayout이 재야 함)
 
 interface Props {
@@ -32,10 +32,10 @@ interface Props {
   z: number // 왼쪽 칸일수록 위 (mongolive 밀러 컬럼 99 - 순서) — 들어오는 칸이 흐름 칸 밑에서 빠져나온다
   phone: boolean
   crumbs: boolean // 사이드바 트리가 화면에 없음 (폰·좁은 창·접은 사이드바) → 본문 맨 위를 브레드크럼으로
-  focused: boolean // 지금 보는 칸 — 칸이 둘일 때 "흐름"/"연관" 글자가 진하게
+  focused: boolean // 지금 보는 칸 — 칸이 둘일 때 "이어읽기"/"건너읽기" 글자가 진하게
   flash: Pulse | null
-  pending: PendingHeading | null
-  dispatch: (action: Action, anchor?: string) => void
+  pending: Landing | null
+  dispatch: (action: Action, land?: Land) => void
   onReveal: (docId: string) => void
   onZoom: (z: Zoom) => void
 }
@@ -56,10 +56,10 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
     spyScroll()
     keep()
   }
-  useHeadingJump(scrollRef, p.pending, slot, doc)
   const jump = (anchor: string) => scrollToAnchor(scrollRef.current, anchor)
   const find = useFind(p.focused, !!doc)
   const { setCard, innerRef, articleRef, unfreeze } = useWidthFollow(ref)
+  useLanding(scrollRef, articleRef, p.pending, slot, p.docId, doc, find.open)
 
   return (
     <m.section
@@ -76,7 +76,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
       className={cx(frame.card, p.half ? frame.half : frame.grow, !p.phone && frame.edge)}
       data-slot={slot}
       data-focus={(p.focused && hasRel) || undefined}
-      aria-label={`${slot === 'main' ? '흐름' : '연관'}: ${title}`}
+      aria-label={`${slot === 'main' ? '이어읽기' : '건너읽기'}: ${title}`}
     >
       {/* 안쪽 motion 요소가 칸의 퇴장을 붙잡지 않게 — 본문은 열린 뒤에 도착한다 (PresenceBoundary 설명) */}
       <PresenceBoundary>
@@ -100,7 +100,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
             onReveal={p.onReveal}
             dispatch={dispatch}
           />
-          {find.n > 0 && doc && <FindBar slot={slot} rootRef={articleRef} scrollRef={scrollRef} ready={doc} focusN={find.n} onClose={find.close} />}
+          {find.seed.n > 0 && doc && <FindBar slot={slot} rootRef={articleRef} scrollRef={scrollRef} ready={doc} seed={find.seed} onClose={find.close} />}
           <div className="relative flex min-h-0 flex-1">
             <div className={frame.scroll} ref={scrollRef} onScroll={onScroll} data-scroll>
               {doc ? (

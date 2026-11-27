@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'reac
 import type { Store } from '../core/data'
 import { linkMarks } from '../core/links'
 import type { View } from '../core/view'
+import type { Land } from '../hooks/useView'
 import { DocLink } from '../ui/DocLink'
 import { IconButton } from '../ui/IconButton'
 import { collapseY } from '../ui/motion'
@@ -74,7 +75,7 @@ interface Props {
   focusSearch: number // 늘어나면 검색칸에 글자 커서 (레일의 검색 아이콘 · / · Ctrl/⌘+K)
   onSearchFocused: () => void
   onClose: () => void // 로고: 폰이면 서랍 닫기, 아니면 레일로
-  onPick: (id: string, anchor?: string) => void // anchor = 본문 찾기에서 걸린 헤딩
+  onPick: (id: string, land?: Land) => void // 찾기 결과면 land = 검색어(칸 안 찾기를 켬) + 본문에서 걸린 헤딩
   onHome: () => void
 }
 
@@ -113,7 +114,7 @@ export function SidebarList(p: Props) {
     body = (
       <>
         {titleHits.map(({ doc, alias }) => (
-          <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id)} className={rowClass(doc.id)} data-hit>
+          <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id, { find: list.query.trim() })} className={rowClass(doc.id)} data-hit>
             <span className={item.title}>
               <Marked text={doc.title} query={list.query} />
             </span>
@@ -133,7 +134,7 @@ export function SidebarList(p: Props) {
           </p>
         )}
         {bodyHits.map(({ doc, anchor, heading, snippet, count }) => (
-          <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id, anchor ?? undefined)} className={rowClass(doc.id)} data-body-hit={anchor ?? ''}>
+          <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id, { anchor: anchor ?? undefined, find: list.query.trim() })} className={rowClass(doc.id)} data-body-hit={anchor ?? ''}>
             <span className={item.title}>{doc.title}</span>
             <span className={styles.snippet}>
               {snippet.before}
@@ -243,8 +244,9 @@ export function SidebarList(p: Props) {
           onChange={(e) => list.setQuery(e.target.value)}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
-              if (titleHits[0]) p.onPick(titleHits[0].doc.id)
-              else if (bodyHits[0]) p.onPick(bodyHits[0].doc.id, bodyHits[0].anchor ?? undefined)
+              const find = list.query.trim()
+              if (titleHits[0]) p.onPick(titleHits[0].doc.id, { find })
+              else if (bodyHits[0]) p.onPick(bodyHits[0].doc.id, { anchor: bodyHits[0].anchor ?? undefined, find })
             }
             if (e.key === 'Escape' && list.query) {
               e.stopPropagation() // 떠 있는 사이드바의 Esc(닫기)보다 먼저 — 검색어부터 지운다

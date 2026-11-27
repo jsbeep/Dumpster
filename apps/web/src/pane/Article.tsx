@@ -4,6 +4,7 @@ import { ArrowDownLeft, ArrowUpRight, CornerUpLeft } from 'lucide-react'
 import { useCallback, type RefObject } from 'react'
 import { backlinks, outLinks } from '../core/links'
 import type { Action, Slot, View } from '../core/view'
+import type { Land } from '../hooks/useView'
 import type { Zoom } from '../Lightbox'
 import { DocLink } from '../ui/DocLink'
 import { ymd } from '../ui/format'
@@ -30,14 +31,14 @@ interface Props {
   view: View
   crumbs: boolean // 사이드바 트리가 화면에 없음 → 맨 위 줄을 브레드크럼으로
   articleRef: RefObject<HTMLElement> // 칸 폭 따라가기(useWidthFollow)·찾기가 재는 본문
-  dispatch: (action: Action, anchor?: string) => void
+  dispatch: (action: Action, land?: Land) => void
   onJump: (anchor: string) => void // 이 칸 안의 그 id까지 스크롤
   onReveal: (docId: string) => void
   onZoom: (z: Zoom) => void
 }
 
 export function Article({ ix, doc, slot, view, crumbs, articleRef, dispatch, onJump, onReveal, onZoom }: Props) {
-  const onOpenDoc = useCallback((id: string, heading?: string) => dispatch({ type: 'link', id }, heading), [dispatch])
+  const onOpenDoc = useCallback((id: string, heading?: string) => dispatch({ type: 'link', id }, heading ? { anchor: heading } : undefined), [dispatch])
   const prevId = ix.prevOf.get(doc.id)
   const prev = prevId ? ix.docsById.get(prevId) : undefined
   const crossPrev = prev && prev.collectionId !== doc.collectionId ? prev : undefined
@@ -87,7 +88,10 @@ export function Article({ ix, doc, slot, view, crumbs, articleRef, dispatch, onJ
           </button>
         )}
       </div>
-      <BlockRenderer blocks={doc.blocks} onOpenDoc={onOpenDoc} />
+      {/* data-body: '이 글을 가리키는 글'로 왔을 때 가리키는 링크를 본문에서만 찾는다 (브레드크럼·글 끝 목록 빼고) */}
+      <div data-body>
+        <BlockRenderer blocks={doc.blocks} onOpenDoc={onOpenDoc} />
+      </div>
       <footer className="mt-11 flex flex-col gap-7 border-t border-line pt-6">
         <Pager ix={ix} doc={doc} slot={slot} dispatch={dispatch} />
         <Links ix={ix} doc={doc} slot={slot} view={view} dispatch={dispatch} />

@@ -26,7 +26,7 @@ interface Props {
   showTitle: boolean // 제목이 위로 지나감 (useScrollSpy)
   canFind: boolean // 본문이 왔을 때만 찾기
   phone: boolean
-  focused: boolean // 칸이 둘일 때 "흐름"/"연관" 글자를 진하게
+  focused: boolean // 칸이 둘일 때 "이어읽기"/"건너읽기" 글자를 진하게
   onMenu?: () => void
   onFind: () => void
   onReveal: (docId: string) => void
@@ -53,14 +53,14 @@ export function PaneHeader({ ix, view, slot, docId, title, showTitle, canFind, p
       )}
       {hasRel && !phone && (
         <span className={cx(styles.lane, focused ? styles.laneFocus : styles.laneIdle)} data-lane>
-          {slot === 'main' ? '흐름' : '연관'}
+          {slot === 'main' ? '이어읽기' : '건너읽기'}
           {slot === 'rel' && n > 1 && <span className="ml-1 font-medium tabular-nums">{`${view.active + 1}/${n}`}</span>}
         </span>
       )}
       {slot === 'rel' && (
         <IconButton
-          label="흐름 칸으로 옮기기"
-          tip="흐름 칸으로 — 이 글을 흐름 칸에 열고 트리에서 보이기"
+          label="이어읽기 칸으로 옮기기"
+          tip="이어읽기 칸으로 — 이 글을 이어읽기 칸에 열고 트리에서 보이기"
           onClick={() => {
             dispatch({ type: 'promote' })
             onReveal(docId)
@@ -73,19 +73,19 @@ export function PaneHeader({ ix, view, slot, docId, title, showTitle, canFind, p
         {title}
       </m.span>
       {canFind && (
-        <IconButton label="이 글에서 찾기" tip="이 글에서 찾기 (Ctrl+F)" onClick={onFind} data-find-open>
+        <IconButton label="이 글에서 찾기" tip="이 글에서 찾기 (Ctrl+F)" onClick={() => onFind()} data-find-open>
           <Search size={15} />
         </IconButton>
       )}
       {slot === 'rel' ? (
         <>
           {n > 1 && (
-            <button type="button" className={styles.textBtn} onClick={() => dispatch({ type: 'closeAll' })} data-tt="연관 탭을 모두 닫기">
+            <button type="button" className={styles.textBtn} onClick={() => dispatch({ type: 'closeAll' })} data-tt="건너읽기 탭을 모두 닫기">
               모두 닫기
             </button>
           )}
           {!phone && (
-            <IconButton label="연관 칸 접기" onClick={() => dispatch({ type: 'collapse', slot: 'rel' })}>
+            <IconButton label="건너읽기 칸 접기" onClick={() => dispatch({ type: 'collapse', slot: 'rel' })}>
               <PanelRightClose size={16} />
             </IconButton>
           )}
@@ -96,7 +96,7 @@ export function PaneHeader({ ix, view, slot, docId, title, showTitle, canFind, p
       ) : (
         hasRel &&
         !phone && (
-          <IconButton label="흐름 칸 접기" onClick={() => dispatch({ type: 'collapse', slot: 'main' })}>
+          <IconButton label="이어읽기 칸 접기" onClick={() => dispatch({ type: 'collapse', slot: 'main' })}>
             <PanelLeftClose size={16} />
           </IconButton>
         )
