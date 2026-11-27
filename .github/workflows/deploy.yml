@@ -46,6 +46,7 @@ jobs:
         uses: actions/checkout@v5
         with:
           repository: ${{ vars.VAULT_REPO }}
+          ref: main # 기본 브랜치 알아내기를 건너뜀 — 그 단계는 인증이 실패해도 git 오류를 안 보여 줌
           ssh-key: ${{ secrets.VAULT_DEPLOY_KEY }}
           path: vault
           fetch-depth: 0
