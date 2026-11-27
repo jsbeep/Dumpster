@@ -50,41 +50,41 @@
     "box": "min-w-0 rounded-lg px-4 py-3",
     "color": {
       "blue": {
-        "box": "bg-blue-500/[0.08]",
+        "box": "bg-blue-500/[0.08] [--callout-tint:rgb(var(--c-blue-500)/0.08)]",
         "title": "text-blue-600"
       },
       "cyan": {
-        "box": "bg-cyan-500/[0.09]",
+        "box": "bg-cyan-500/[0.09] [--callout-tint:rgb(var(--c-cyan-500)/0.09)]",
         "title": "text-cyan-700"
       },
       "emerald": {
-        "box": "bg-emerald-500/[0.09]",
+        "box": "bg-emerald-500/[0.09] [--callout-tint:rgb(var(--c-emerald-500)/0.09)]",
         "title": "text-emerald-700"
       },
       "amber": {
-        "box": "bg-amber-500/[0.1]",
+        "box": "bg-amber-500/[0.1] [--callout-tint:rgb(var(--c-amber-500)/0.1)]",
         "title": "text-amber-700"
       },
       "orange": {
-        "box": "bg-orange-500/[0.09]",
+        "box": "bg-orange-500/[0.09] [--callout-tint:rgb(var(--c-orange-500)/0.09)]",
         "title": "text-orange-600"
       },
       "red": {
-        "box": "bg-red-500/[0.08]",
+        "box": "bg-red-500/[0.08] [--callout-tint:rgb(var(--c-red-500)/0.08)]",
         "title": "text-red-600"
       },
       "violet": {
-        "box": "bg-violet-500/[0.08]",
+        "box": "bg-violet-500/[0.08] [--callout-tint:rgb(var(--c-violet-500)/0.08)]",
         "title": "text-violet-600"
       },
       "slate": {
-        "box": "bg-slate-500/[0.08]",
+        "box": "bg-slate-500/[0.08] [--callout-tint:rgb(var(--c-slate-500)/0.08)]",
         "title": "text-slate-600"
       }
     },
     "head": "flex items-start gap-2 font-semibold [&_strong]:text-inherit",
     "details": "[interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:[transition:height_0.25s_ease,content-visibility_0.25s_allow-discrete] [&[open]::details-content]:h-auto",
-    "summary": "cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden",
+    "summary": "cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden -mt-3 -mb-2 rounded-t-lg pb-2 pt-3 scroll-mt-[var(--stick-top,0px)] [[open]>&]:sticky [[open]>&]:top-[var(--stick-top,0px)] [[open]>&]:z-[5] [[open]>&]:[background:linear-gradient(var(--callout-tint),var(--callout-tint)),var(--page-bg)] [[open]_[open]>&]:static [[open]_[open]>&]:[background:none]",
     "icon": "mt-[0.325em] h-[1.05em] w-[1.05em] shrink-0",
     "title": "min-w-0",
     "chevron": "mt-[0.35em] h-[1em] w-[1em] shrink-0 opacity-70 transition-transform duration-200 [details[open]>summary>&]:rotate-90",

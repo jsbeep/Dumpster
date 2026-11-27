@@ -9,7 +9,7 @@ import type { View } from '../core/view'
 import type { Land } from '../hooks/useView'
 import { DocLink } from '../ui/DocLink'
 import { IconButton } from '../ui/IconButton'
-import { collapseY } from '../ui/motion'
+import { collapseNow, collapseY } from '../ui/motion'
 import { SITE } from '../ui/site'
 import { Recent } from './Recent'
 import { item, Logo, TABS, ThemeToggle } from './shared'
@@ -106,6 +106,7 @@ export function SidebarList(p: Props) {
       folds={list.folds[cid] ?? []}
       onFold={(id) => list.toggleFold(cid, id)}
       onOpen={p.onPick}
+      still={p.phone}
     />
   )
 
@@ -207,7 +208,7 @@ export function SidebarList(p: Props) {
             </div>
             <AnimatePresence initial={false}>
               {isOpen && (
-                <m.div key="tree" {...collapseY} className="overflow-hidden pb-1">
+                <m.div key="tree" {...(p.phone ? collapseNow : collapseY)} className="overflow-hidden pb-1">
                   {tree(c.id)}
                 </m.div>
               )}

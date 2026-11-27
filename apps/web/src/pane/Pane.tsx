@@ -1,6 +1,6 @@
 import { cx, type BlockOf } from '@dumpster/blocks'
 import { m } from 'framer-motion'
-import { forwardRef, useCallback, useEffect, useRef, useState } from 'react'
+import { forwardRef, useCallback, useEffect, useRef, useState, type CSSProperties } from 'react'
 import type { Store } from '../core/data'
 import type { Action, Slot, View } from '../core/view'
 import type { Land, Landing, Pulse } from '../hooks/useView'
@@ -38,6 +38,7 @@ interface Props {
   dispatch: (action: Action, land?: Land) => void
   onReveal: (docId: string) => void
   onZoom: (z: Zoom) => void
+  onTag: (tag: string) => void
 }
 
 export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
@@ -77,6 +78,8 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   const { setCard, innerRef, articleRef, unfreeze } = useWidthFollow(ref)
   useLanding(scrollRef, articleRef, p.pending, slot, p.docId, doc, find.open)
   // 폰은 칸 움직임 없음 (B3 — 사용자: 폰은 단순하게). 칸이 하나라 들고 나는 칸도 없다
+  // 본문 안에서 위에 붙는 것(열린 접는 콜아웃 제목줄 — blocks callout)이 붙을 높이: 폰은 화면 위 칸 머리(48px) + 찾기 줄(48px) 밑
+  const stickTop = (p.phone ? { '--stick-top': `${48 + (find.seed.n > 0 && doc ? 48 : 0)}px` } : undefined) as CSSProperties | undefined
   const motion = p.phone
     ? {}
     : { custom: p.dir, variants: paneVariants, initial: 'enter', animate: 'center', exit: 'exit', transition: QUICK, layout: true, onLayoutAnimationComplete: unfreeze }
@@ -120,9 +123,15 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
           {phoneToc && tocOpen && <TocSheet heads={heads} current={spy.heading} onGo={jump} onClose={closeToc} />}
           </div>
           <div className="relative flex min-h-0 flex-1">
-            <div className={p.phone ? frame.scrollPage : frame.scroll} ref={scrollRef} onScroll={p.phone ? undefined : onScroll} data-scroll={p.phone ? 'page' : ''}>
+            <div
+              className={p.phone ? frame.scrollPage : frame.scroll}
+              ref={scrollRef}
+              onScroll={p.phone ? undefined : onScroll}
+              style={stickTop}
+              data-scroll={p.phone ? 'page' : ''}
+            >
               {doc ? (
-                <Article ix={ix} doc={doc} slot={slot} view={view} crumbs={p.crumbs} tocRail={tocRail} articleRef={articleRef} dispatch={dispatch} onJump={jump} onReveal={p.onReveal} onZoom={p.onZoom} />
+                <Article ix={ix} doc={doc} slot={slot} view={view} crumbs={p.crumbs} tocRail={tocRail} articleRef={articleRef} dispatch={dispatch} onJump={jump} onReveal={p.onReveal} onZoom={p.onZoom} onTag={p.onTag} />
               ) : doc === null || !meta ? (
                 <Gone />
               ) : null}

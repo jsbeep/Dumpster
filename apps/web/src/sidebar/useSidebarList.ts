@@ -28,7 +28,13 @@ export interface ListState {
   toggleFold: (cid: string, id: string) => void
 }
 
-export function useSidebarList(ix: GraphIndex, focusDoc: string | null, reveal: RevealRequest | null, onReveal: () => void) {
+// 글 위 태그를 누름 → 태그 목록에서 그 태그 (11-27)
+export interface TagRequest {
+  tag: string
+  n: number
+}
+
+export function useSidebarList(ix: GraphIndex, focusDoc: string | null, reveal: RevealRequest | null, tagReq: TagRequest | null, onReveal: () => void) {
   const [query, setQuery] = useState('')
   const [tab, setTab] = useState<SideTab>('collections')
   const [tag, setTag] = useState<string | null>(null)
@@ -88,6 +94,17 @@ export function useSidebarList(ix: GraphIndex, focusDoc: string | null, reveal: 
     onReveal()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ix, reveal])
+
+  // 글 위 #태그 → 태그 목록에서 그 태그 고른 채로 (사이드바가 접혀 있으면 꺼낸다), 목록은 맨 위부터
+  useEffect(() => {
+    if (!tagReq) return
+    setTab('tags')
+    setQuery('')
+    setTag(tagReq.tag)
+    if (bodyRef.current) bodyRef.current.scrollTop = 0
+    onReveal()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tagReq])
 
   // 그린 뒤: 보일 글의 행이 목록 밖이면 1/3 지점으로
   useEffect(() => {

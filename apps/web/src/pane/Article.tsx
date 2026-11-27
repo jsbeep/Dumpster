@@ -7,7 +7,7 @@ import type { Action, Slot, View } from '../core/view'
 import type { Land } from '../hooks/useView'
 import type { Zoom } from '../Lightbox'
 import { DocLink } from '../ui/DocLink'
-import { ymd } from '../ui/format'
+import { dateTip, ymd } from '../ui/format'
 import { Crumbs } from './Crumbs'
 import { Links } from './Links'
 import { Pager } from './Pager'
@@ -19,6 +19,8 @@ const styles = {
   cfrom: 'mt-1.5 flex w-fit max-w-full items-center gap-1.5 rounded-md border border-line px-2.5 py-1 text-[12.5px] text-slate-500 transition-colors hover:text-slate-900',
   title: 'mt-2 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 [text-wrap:balance] @[560px]:text-[28px]',
   meta: 'mb-[26px] mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-[13px] tabular-nums text-slate-500',
+  // 날짜(툴팁 = 쓴 날 자세히 · 얼마 전 · 고친 날)·#태그(→ 사이드바 태그 목록) — 글자 그대로, 누를 수 있는 티는 마우스 바탕만
+  metaBtn: '-mx-1 rounded px-1 transition-colors hover:bg-hover hover:text-slate-900',
   // ↙↗ 개수 — 알약 대신 글자 + 아이콘
   count: 'inline-flex items-center gap-0.5 rounded px-1 -mx-1 font-medium text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
   gone: 'm-auto p-6 text-center text-[14px] text-slate-500',
@@ -36,12 +38,13 @@ interface Props {
   onJump: (anchor: string) => void // 이 칸 안의 그 id까지 스크롤
   onReveal: (docId: string) => void
   onZoom: (z: Zoom) => void
+  onTag: (tag: string) => void // #태그 → 사이드바 태그 목록에서 그 태그
 }
 
 // memo — 칸은 읽는 위치(목차 줄·칸 머리 제목)가 바뀔 때마다 다시 그려진다. 헤딩이 칸 위를 지날 때마다 본문 블록을
 // 전부 다시 그리면 폰에서 그 프레임이 길어져 버벅였다(11-27 측정: 헤딩 4개 글 한 번 내리는 동안 5번, 최장 프레임 35ms).
 // 그래서 props는 전부 안 바뀌는 값으로 넘긴다 (Pane의 jump는 useCallback)
-export const Article = memo(function Article({ ix, doc, slot, view, crumbs, tocRail, articleRef, dispatch, onJump, onReveal, onZoom }: Props) {
+export const Article = memo(function Article({ ix, doc, slot, view, crumbs, tocRail, articleRef, dispatch, onJump, onReveal, onZoom, onTag }: Props) {
   const onOpenDoc = useCallback((id: string, heading?: string) => dispatch({ type: 'link', id }, heading ? { anchor: heading } : undefined), [dispatch])
   const prevId = ix.prevOf.get(doc.id)
   const prev = prevId ? ix.docsById.get(prevId) : undefined
@@ -75,9 +78,14 @@ export const Article = memo(function Article({ ix, doc, slot, view, crumbs, tocR
         {doc.title}
       </h1>
       <div className={styles.meta} data-nofind>
-        <span>{ymd(doc.createdAt)}</span>
+        {/* 날짜 — 마우스를 올리거나 손가락으로 누르면 자세히 (data-tt-tap, ui/TooltipLayer) */}
+        <button type="button" className={styles.metaBtn} data-tt={dateTip(doc.createdAt, doc.updatedAt)} data-tt-tap data-tt-align="left" data-date>
+          {ymd(doc.createdAt)}
+        </button>
         {doc.tags.map((t) => (
-          <span key={t}>#{t}</span>
+          <button key={t} type="button" className={styles.metaBtn} onClick={() => onTag(t)} data-tt={`#${t} 글 모아 보기`} data-tag={t}>
+            #{t}
+          </button>
         ))}
         {bl.length > 0 && (
           <button type="button" className={styles.count} onClick={() => onJump(`links-in-${slot}`)} data-tt={`이 글을 가리키는 글 ${bl.length}개`} data-count="in">

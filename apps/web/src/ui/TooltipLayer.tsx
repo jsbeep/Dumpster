@@ -6,6 +6,8 @@ import { DotLegend } from './dots'
 // ── 툴팁 레이어 ───────────────────────────────────────────────────────────────
 // 앱 전체에 하나만 마운트되는 툴팁. 각 컨트롤은 `data-tt="설명"` 속성만 달면 되고
 // (옵션: data-tt-side="top", data-tt-align="left") 여기서 이벤트 위임으로 처리한다.
+// 손가락·펜은 마우스 올리기가 없어 툴팁을 안 띄운다. data-tt-tap이 붙은 것만 누르면 바로 띄운다(날짜 — 11-27)
+// — 다른 데를 누르거나 스크롤하면 사라진다. 줄바꿈(\n)은 그대로 줄을 바꾼다
 //
 // 왜 CSS ::after가 아니라 portal인가 —
 //   ① 컬럼(칸)이 framer-motion layout 애니메이션으로 transform이 걸리고 그 부모가 stacking context를
@@ -68,15 +70,31 @@ export function TooltipLayer() {
       clearTimer()
       anchorRef.current = anchor
       setPos(null)
-      timerRef.current = window.setTimeout(() => {
-        setTip({
-          text,
-          legend: legend?.split(' '),
-          anchor: anchor.getBoundingClientRect(),
-          side: anchor.dataset.ttSide === 'top' ? 'top' : 'bottom',
-          align: anchor.dataset.ttAlign === 'left' ? 'left' : 'right',
-        })
-      }, legend === undefined ? SHOW_DELAY_MS : LEGEND_DELAY_MS)
+      timerRef.current = window.setTimeout(() => show(anchor), legend === undefined ? SHOW_DELAY_MS : LEGEND_DELAY_MS)
+    }
+
+    const show = (anchor: HTMLElement) =>
+      setTip({
+        text: anchor.dataset.tt ?? '',
+        legend: anchor.dataset.legend?.split(' '),
+        anchor: anchor.getBoundingClientRect(),
+        side: anchor.dataset.ttSide === 'top' ? 'top' : 'bottom',
+        align: anchor.dataset.ttAlign === 'left' ? 'left' : 'right',
+      })
+
+    // 손가락으로 누른 data-tt-tap → 바로 (누르는 순간 pointerdown이 앞 툴팁을 지웠다)
+    let lastPointer = 'mouse'
+    const handleDown = (event: PointerEvent) => {
+      lastPointer = event.pointerType
+      hide()
+    }
+    const handleTap = (event: MouseEvent) => {
+      if (lastPointer === 'mouse') return
+      const anchor = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-tt-tap][data-tt]') : null
+      if (!anchor) return
+      anchorRef.current = anchor
+      setPos(null)
+      show(anchor)
     }
 
     const handleOut = (event: PointerEvent) => {
@@ -89,7 +107,8 @@ export function TooltipLayer() {
 
     document.addEventListener('pointerover', handleOver)
     document.addEventListener('pointerout', handleOut)
-    document.addEventListener('pointerdown', hide)
+    document.addEventListener('pointerdown', handleDown)
+    document.addEventListener('click', handleTap)
     // 캡처 단계로 받아야 컬럼 내부 스크롤까지 잡힌다 (스크롤되면 앵커 좌표가 무효)
     window.addEventListener('scroll', hide, true)
     window.addEventListener('blur', hide)
@@ -98,7 +117,8 @@ export function TooltipLayer() {
       clearTimer()
       document.removeEventListener('pointerover', handleOver)
       document.removeEventListener('pointerout', handleOut)
-      document.removeEventListener('pointerdown', hide)
+      document.removeEventListener('pointerdown', handleDown)
+      document.removeEventListener('click', handleTap)
       window.removeEventListener('scroll', hide, true)
       window.removeEventListener('blur', hide)
     }
@@ -133,7 +153,7 @@ export function TooltipLayer() {
       className={
         tip.legend
           ? 'pointer-events-none fixed z-[900] rounded-lg border border-line bg-page px-3 py-2.5 shadow-pop transition-opacity duration-100'
-          : 'pointer-events-none fixed z-[900] max-w-[216px] rounded-md bg-slate-900 px-2 py-1.5 text-[11px] font-medium leading-snug text-slate-50 shadow-pop transition-opacity duration-100'
+          : 'pointer-events-none fixed z-[900] max-w-[240px] whitespace-pre-line rounded-md bg-slate-900 px-2 py-1.5 text-[11px] font-medium leading-snug text-slate-50 shadow-pop transition-opacity duration-100'
       }
       style={{
         // 좌표를 재기 전(pos === null)엔 화면 밖에 둔다 — opacity만 0으로 두면

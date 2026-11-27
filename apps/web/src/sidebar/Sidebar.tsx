@@ -12,7 +12,7 @@ import { Rail } from './Rail'
 import { SidebarList } from './SidebarList'
 import { useDrag } from './useDrag'
 import { FULL_DEFAULT, RAIL_WIDTH, clampFullWidth, snapMode, type SidebarMode, type SidebarState } from './useSidebar'
-import { useSidebarList, type RevealRequest } from './useSidebarList'
+import { useSidebarList, type RevealRequest, type TagRequest } from './useSidebarList'
 
 // 왼쪽 사이드바 껍데기 — mongolive components/layout/Sidebar.tsx의 모양·동작을 그대로 잇는다. 내용은 SidebarList(전체)·Rail(레일)
 //   세 단계(useSidebar): 완전 접힘 / 아이콘 레일 / 전체
@@ -49,6 +49,7 @@ interface Props {
   focusDoc: string | null
   hl: (string | null)[]
   reveal: RevealRequest | null
+  tagReq: TagRequest | null // 글 위 #태그 → 태그 목록
   onOpen: (docId: string, land?: Land) => void // 찾기 결과에서 고른 글이면 land(검색어 · 본문에서 걸린 헤딩)
   onScan: (docId: string) => void // j/k — 흐름 칸 교체, 기록 덮어씀
   onHome: () => void
@@ -59,7 +60,7 @@ export function Sidebar(p: Props) {
   const { mode, isOverlay, width, setMode } = sidebar
 
   // 목록 상태 — '트리에서 보기'가 오면 (폰이 아니고) 전체로 연다
-  const { list, bodyRef } = useSidebarList(ix, p.focusDoc, p.reveal, () => {
+  const { list, bodyRef } = useSidebarList(ix, p.focusDoc, p.reveal, p.tagReq, () => {
     if (!p.phone && mode !== 'full') setMode('full')
   })
   const [focusSearch, setFocusSearch] = useState(0)

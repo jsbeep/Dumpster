@@ -27,3 +27,6 @@ export const collapseY = {
   exit: { height: 0, opacity: 0 },
   transition: FAST,
 }
+// 폰은 펼치기·접기를 바로 (11-27 사용자). 높이 애니메이션은 CSS로 해도 매 프레임 레이아웃이라 GPU로 못 넘긴다 —
+// iOS 저전력 모드에선 어차피 30fps라 차라리 뺀다. AnimatePresence 안에서 그대로 바꿔 끼우게 모양은 collapseY와 같게
+export const collapseNow = { ...collapseY, initial: false as const, transition: { duration: 0 } }

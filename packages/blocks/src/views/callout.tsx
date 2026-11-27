@@ -16,7 +16,7 @@ import {
   Zap,
   type LucideIcon,
 } from 'lucide-react'
-import type { ReactNode } from 'react'
+import { useRef, type ReactNode } from 'react'
 import { BlockView } from '../BlockRenderer'
 import type { BlockOf } from '../context'
 import { useStyles, type BlockStyles } from '../styles'
@@ -68,7 +68,12 @@ export function calloutKind(kind: string): { color: Color; Icon: LucideIcon } {
 // - icon·chevron mt: 제목이 두 줄이 돼도 첫 줄 가운데에 — 줄 높이 1.7em 기준
 // - details: 접히는 콜아웃은 blog-explorer toggle의 높이 애니메이션. 닫힐 때도 보이게 content-visibility도 전환
 // - chevron: 콜아웃이 중첩돼도 자기 <details>가 열렸을 때만 돈다 (group-open은 바깥 details에도 반응)
+// - summary: 열린 접는 콜아웃의 제목줄은 칸 위에 붙는다(sticky, 11-27) — 긴 콜아웃 중간에서도 눌러서 접는다.
+//   붙는 높이는 --stick-top(탐색기 폰 = 칸 머리 높이, 없으면 0). 붙은 동안 뒤 글이 비치지 않게 바탕 = 콜아웃 색(--callout-tint) + 페이지 바탕.
+//   상자 위·아래 여백만큼 음수 여백으로 넓혀 붙었을 때도 상자 폭·여백 그대로. 안쪽 콜아웃 제목줄은 안 붙는다(바깥과 겹침)
+// 붙은 제목줄을 눌러 접으면 제목이 제자리(위쪽 멀리)로 돌아가 화면에서 사라진다 → 누르기 직전 자리로 다시 데려온다 (scroll-mt = 붙는 높이)
 export function CalloutView({ block }: { block: BlockOf<'callout'> }) {
+  const pressedTop = useRef<number | null>(null)
   const S = useStyles().callout
   const { color, Icon } = calloutKind(block.kind)
   const kind = block.kind.toLowerCase()
@@ -102,8 +107,22 @@ export function CalloutView({ block }: { block: BlockOf<'callout'> }) {
     )
   }
   return (
-    <details className={cx(box, S.details)} open={block.fold === 'open'} data-callout={kind}>
-      <summary className={cx(headClass, S.summary)}>{head}</summary>
+    <details
+      className={cx(box, S.details)}
+      open={block.fold === 'open'}
+      data-callout={kind}
+      onToggle={(e) => {
+        const top = pressedTop.current
+        pressedTop.current = null
+        const d = e.currentTarget
+        if (d.open || top === null) return
+        const sm = d.querySelector(':scope > summary')
+        if (sm && sm.getBoundingClientRect().top < top - 1) sm.scrollIntoView({ block: 'start' })
+      }}
+    >
+      <summary className={cx(headClass, S.summary)} onClick={(e) => (pressedTop.current = e.currentTarget.getBoundingClientRect().top)}>
+        {head}
+      </summary>
       {body}
     </details>
   )

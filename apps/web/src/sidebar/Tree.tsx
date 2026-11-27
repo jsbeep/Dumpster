@@ -4,7 +4,7 @@ import { AnimatePresence, m } from 'framer-motion'
 import { ArrowDownLeft, ArrowUpRight, ChevronDown, ChevronRight, CornerUpLeft } from 'lucide-react'
 import { descendants, type LinkMark } from '../core/links'
 import { shownTree } from '../core/treeRows'
-import { collapseY } from '../ui/motion'
+import { collapseNow, collapseY } from '../ui/motion'
 import { DocLink } from '../ui/DocLink'
 import { dotClass, type DotShape, type DotState } from '../ui/dots'
 import { activeOf, type View } from '../core/view'
@@ -47,9 +47,10 @@ interface Props {
   folds: string[] // 이 컬렉션에서 접은 분기점
   onFold: (docId: string) => void
   onOpen: (docId: string) => void
+  still: boolean // 폰 — 분기점 접기·펼치기를 바로 (ui/motion collapseNow)
 }
 
-export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen }: Props) {
+export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen, still }: Props) {
   const cur = activeOf(view)
   const inTabs = new Set(view.tabs)
   const sel = view.main && ix.docsById.get(view.main)?.collectionId === collectionId ? view.main : null
@@ -70,7 +71,7 @@ export function Tree({ ix, collectionId, view, marks, hl, folds, onFold, onOpen 
     const shape: DotShape = d.kind === 'manifest' ? 'man' : r.forks > 1 ? 'fork' : 'idle'
     const state: DotState = isSel ? 'sel' : isAct ? 'act' : inTabs.has(r.docId) ? 'open' : ''
     return (
-      <m.div key={r.docId} {...collapseY} className="overflow-hidden">
+      <m.div key={r.docId} {...(still ? collapseNow : collapseY)} className="overflow-hidden">
         <div
           className={cx(styles.row, isSel ? styles.rowSel : styles.rowIdle, isHl && styles.rowHl)}
           data-row={r.docId}

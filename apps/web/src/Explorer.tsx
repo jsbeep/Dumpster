@@ -12,7 +12,7 @@ import { Lightbox, type Zoom } from './Lightbox'
 import { Pane } from './pane/Pane'
 import { Sidebar } from './sidebar/Sidebar'
 import { useSidebar } from './sidebar/useSidebar'
-import type { RevealRequest } from './sidebar/useSidebarList'
+import type { RevealRequest, TagRequest } from './sidebar/useSidebarList'
 import { FlowSpine, Stack } from './Strips'
 import { SITE } from './ui/site'
 import { slide } from './ui/viewTransition'
@@ -41,6 +41,7 @@ export function Explorer({ store }: { store: Store }) {
   const drawerW = useDrawerWidth(phone)
   const [hover, setHover] = useState<string | null>(null) // 본문 링크·띠·글 끝 목록에 마우스 → 트리에서 그 글 자리
   const [reveal, setReveal] = useState<RevealRequest | null>(null)
+  const [tagReq, setTagReq] = useState<TagRequest | null>(null)
   const [rowFlash, setRowFlash] = useState<string | null>(null)
   const [zoom, setZoom] = useState<Zoom | null>(null)
 
@@ -63,6 +64,14 @@ export function Explorer({ store }: { store: Store }) {
     if (!phone) setDrawer(false)
   }, [phone])
 
+  // 글 위 #태그 → 사이드바 태그 목록에서 그 태그 (접혀 있으면 펼치고, 폰은 서랍을 연다)
+  const showTag = useCallback(
+    (tag: string) => {
+      setTagReq({ tag, n: ++revealN })
+      if (phone) setDrawer(true)
+    },
+    [phone],
+  )
   // 트리에서 그 글 보이기 — 사이드바가 접혀 있으면 펼치고(폰은 서랍을 열고), 행을 잠깐 테두리로
   const revealDoc = useCallback(
     (id: string) => {
@@ -114,7 +123,7 @@ export function Explorer({ store }: { store: Store }) {
     },
     [ix, view, dispatch],
   )
-  const paneProps = { store, view, phone, crumbs, flash, pending, dispatch: phone ? phoneDispatch : dispatch, onReveal: revealDoc, onZoom: setZoom, onMenu }
+  const paneProps = { store, view, phone, crumbs, flash, pending, dispatch: phone ? phoneDispatch : dispatch, onReveal: revealDoc, onZoom: setZoom, onTag: showTag, onMenu }
   // 두 칸이 나란히면 흐름 칸은 반 — 띠가 몇 개든 흐름 칸 폭은 그대로, 띠는 연관 쪽에서만 빠진다
   const half = !phone && hasRel && !coll
 
@@ -131,6 +140,7 @@ export function Explorer({ store }: { store: Store }) {
       focusDoc={focusDoc}
       hl={[hover, rowFlash]}
       reveal={reveal}
+      tagReq={tagReq}
       onOpen={(id, land) => {
         dispatch({ type: 'open', id, solo: phone }, land)
         setDrawer(false)
