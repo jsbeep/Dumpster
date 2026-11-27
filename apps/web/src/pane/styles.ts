@@ -12,7 +12,8 @@ export const frame = {
   header: 'flex h-11 max-[720px]:h-12 shrink-0 items-center gap-0.5 border-b px-2 transition-colors',
   scroll: 'relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain',
   scrollPage: 'relative min-w-0 flex-1 overflow-x-clip', // 폰 — 늘어나기만 (clip은 스크롤 상자를 안 만들어 sticky가 산다)
-  sticky: 'sticky top-0 z-30 bg-page', // 폰 — 칸 머리 · 찾기 줄 · 목차를 화면 위에 붙인다
+  // 폰 — 칸 머리 · 찾기 줄 · 목차를 화면 위에 붙인다. 글 바꾸기 슬라이드(ui/viewTransition) 땐 이름을 따로 줘서 본문만 미끄러지고 머리는 제자리
+  sticky: 'sticky top-0 z-30 bg-page [view-transition-name:phone-head]',
   page: 'mx-auto max-w-[760px] pb-16 @[560px]:px-11 @[560px]:pb-[72px]',
   // 좁은 칸(<560px)의 좌우 여백 — 오른쪽 위 목차 줄(PC, 헤딩 둘 이상)이 있으면 그 자리만큼 오른쪽을 넓힌다. 없으면(폰·첫 화면·헤딩 적은 글) 같게
   padEven: 'px-[22px]',

@@ -1,3 +1,4 @@
+import { slideOf } from '../src/core/slide'
 import { buildGraphIndex, type Relation } from '@dumpster/schema'
 import { fileURLToPath } from 'node:url'
 import { describe, expect, it } from 'vitest'
@@ -305,5 +306,29 @@ describe('스크롤 기억: 처음 여는 글', () => {
   })
   it('j/k(scan)도 새 글이면 처음부터', () => {
     expect(fresh(view('OS 설치'), { type: 'open', id: id('고정 IP 설정'), scan: true })).toEqual(['고정 IP 설정'])
+  })
+})
+
+describe('폰 글 바꾸기 슬라이드 방향 (core/slide)', () => {
+  it('이전/다음 — 이전 글·분기점이면 prev, 다음 글이면 next', () => {
+    const v = view('용량 부족 사태')
+    expect(slideOf(index, v, { type: 'step', slot: 'main', id: id('외장 SSD 달기') })).toBe('next')
+    expect(slideOf(index, v, { type: 'step', slot: 'main', id: id('Nextcloud 올리기') })).toBe('prev')
+    const fork = index.ancestors(id('용량 부족 사태'))[0]
+    expect(slideOf(index, v, { type: 'step', slot: 'main', id: fork })).toBe('prev')
+  })
+  it('링크(새 탭)는 next, ‹·탭 닫기·모두 닫기는 prev', () => {
+    const v = view('용량 부족 사태', ['OS 설치', '외장 SSD 달기'], '외장 SSD 달기')
+    expect(slideOf(index, view('용량 부족 사태'), { type: 'link', id: id('OS 설치') })).toBe('next')
+    expect(slideOf(index, v, { type: 'back' })).toBe('prev')
+    expect(slideOf(index, v, { type: 'close', index: 1 })).toBe('prev')
+    expect(slideOf(index, v, { type: 'closeAll' })).toBe('prev')
+  })
+  it('보이는 글이 그대로면(반짝만)·서랍에서 고르기·첫 화면은 안 미끄러짐', () => {
+    const v = view('용량 부족 사태')
+    expect(slideOf(index, v, { type: 'link', id: id('용량 부족 사태') })).toBeNull()
+    expect(slideOf(index, v, { type: 'open', id: id('OS 설치'), solo: true })).toBeNull()
+    expect(slideOf(index, v, { type: 'home' })).toBeNull()
+    expect(slideOf(index, view('용량 부족 사태', ['OS 설치'], 'OS 설치'), { type: 'promote' })).toBeNull()
   })
 })

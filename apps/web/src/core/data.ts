@@ -11,6 +11,9 @@ export interface Store {
   // 주소에 적힌 ID → 지금 ID. 없으면 null
   resolveId(id: string): string | null
   getDoc(id: string): Promise<Doc | null>
+  // 이미 받아 둔 글은 바로 (undefined = 아직 안 받음). 폰 글 바꾸기 슬라이드(View Transition)는 새 화면을 그 자리에서
+  // 다 그려야 스냅샷을 찍는다 — 받는 중이면 빈 칸이 찍힌다. 글마다 나누면 getDoc이 받은 것을 여기서 돌려준다
+  peekDoc(id: string): Doc | null | undefined
   getSearchText(): Promise<SearchText[]>
 }
 
@@ -31,13 +34,19 @@ export function createStore(graph: Graph): Store {
     return s ? (byStamp.get(s) ?? null) : null
   }
 
+  // 지금은 graph.json 하나에 다 있어서 늘 바로 꺼낸다 (undefined가 안 나옴)
+  const peekDoc = (id: string): Doc | null => {
+    const real = resolveId(id)
+    return real ? (index.docsById.get(real) ?? null) : null
+  }
+
   return {
     index,
     resolveId,
     async getDoc(id) {
-      const real = resolveId(id)
-      return real ? (index.docsById.get(real) ?? null) : null
+      return peekDoc(id)
     },
+    peekDoc,
     async getSearchText() {
       return graph.docs
     },

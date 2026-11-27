@@ -59,6 +59,51 @@ body {
   scrollbar-color: var(--scrollbar) transparent;
 }
 
+/* 폰 글 바꾸기 슬라이드 (ui/viewTransition — View Transitions API, 11-27). 옛 화면·새 화면 스냅샷만 transform으로 움직인다:
+   다음(next) = 새 글이 오른쪽에서 덮고 옛 글은 왼쪽으로 조금 밀림(iOS 들어가기), 이전(prev) = 거꾸로 옛 글이 오른쪽으로 빠지며 위에 남음.
+   칸 머리(phone-head, pane/styles frame.sticky)는 제자리에서 바뀐다. 곡선·길이 = ui/motion QUICK.
+   스프링(linear())·blur 필터는 쓰지 말 것 — iOS에서 GPU로 못 넘겨 저전력 모드 30fps가 된다 */
+::view-transition-group(*),
+::view-transition-old(*),
+::view-transition-new(*) {
+  animation-duration: 0.2s;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+  animation-fill-mode: both;
+}
+html[data-slide='next']::view-transition-old(root) {
+  animation-name: vt-push-out;
+}
+html[data-slide='next']::view-transition-new(root) {
+  animation-name: vt-push-in;
+}
+html[data-slide='prev']::view-transition-old(root) {
+  animation-name: vt-pop-out;
+  z-index: 1;
+}
+html[data-slide='prev']::view-transition-new(root) {
+  animation-name: vt-pop-in;
+}
+@keyframes vt-push-out {
+  to {
+    transform: translateX(-25%);
+  }
+}
+@keyframes vt-push-in {
+  from {
+    transform: translateX(100%);
+  }
+}
+@keyframes vt-pop-out {
+  to {
+    transform: translateX(100%);
+  }
+}
+@keyframes vt-pop-in {
+  from {
+    transform: translateX(-25%);
+  }
+}
+
 /* 칸 안 찾기 (pane/Find.tsx) — CSS Custom Highlight API. 칸마다 이름이 따로라 두 칸을 동시에 찾아도 안 섞인다 */
 ::highlight(find-main),
 ::highlight(find-rel) {

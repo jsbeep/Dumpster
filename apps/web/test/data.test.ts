@@ -49,9 +49,11 @@ describe('주소의 ID 찾기', () => {
     expect(store.resolveId('6aeb0b8091f37a98e7009999')).toBeNull()
     expect(store.resolveId('아무거나')).toBeNull()
   })
-  it('getDoc은 async, 옛 ID로도 글을 준다', async () => {
+  it('getDoc은 async, 옛 ID로도 글을 준다 · peekDoc은 받아 둔 글을 바로', async () => {
     expect((await store.getDoc('도커-깔기-2611041940'))?.title).toBe('도커 설치')
     expect(await store.getDoc('아무거나')).toBeNull()
+    expect(store.peekDoc('도커-깔기-2611041940')?.title).toBe('도커 설치')
+    expect(store.peekDoc('아무거나')).toBeNull()
   })
 })
 
