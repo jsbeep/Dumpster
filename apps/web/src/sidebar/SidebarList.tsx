@@ -1,8 +1,9 @@
 import { cx } from '@dumpster/blocks'
-import type { GraphIndex } from '@dumpster/schema'
+import type { Collection, GraphIndex } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { ChevronDown, ChevronLeft, Maximize2, Minimize2, PanelLeftClose, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react'
+import { collectionTree, withinCollection } from '../core/collections'
 import type { Store } from '../core/data'
 import { linkMarks } from '../core/links'
 import type { View } from '../core/view'
@@ -97,7 +98,8 @@ export function SidebarList(p: Props) {
   const { titleHits, bodyHits, wantBody, bodyWaiting } = useSearch(ix, p.store, list.query)
   const searching = list.query.trim() !== ''
   const marks = useMemo(() => linkMarks(ix, p.focusDoc), [ix, p.focusDoc])
-  const count = (cid: string) => ix.docsByCollection.get(cid)?.length ?? 0
+  const colls = collectionTree(ix)
+  const count = (cid: string) => colls.total.get(cid) ?? 0
   const tree = (cid: string) => (
     <Tree
       ix={ix}
@@ -161,6 +163,53 @@ export function SidebarList(p: Props) {
   } else if (list.tab === 'collections') {
     const k = list.only ? ix.collectionsById.get(list.only) : undefined
     const mainCid = view.main ? ix.docsById.get(view.main)?.collectionId : null
+    // 컬렉션 한 줄 + 펼치면 하위 컬렉션(폴더처럼 먼저) → 자기 트리. 부모를 접으면 하위도 같이 숨는다
+    // 접힌 줄엔 이어읽는 글이 그 아래(하위 컬렉션 포함)에 있으면 점
+    const kidsOf = (cid: string) => {
+      const kids = colls.kids.get(cid)
+      return kids?.length ? <div className="pl-3.5">{kids.map(collection)}</div> : null
+    }
+    function collection(c: Collection): ReactNode {
+      const isOpen = list.open.has(c.id)
+      const here = mainCid === c.id || (!isOpen && !!mainCid && withinCollection(ix, c.id, mainCid))
+      // 폰은 마우스 올리기가 없어 '이 컬렉션만 보기'가 안 보였다 → 열린 컬렉션 줄엔 개수 옆에 늘 (11-27, 크기는 PC와 같게)
+      const pin = p.phone && isOpen
+      return (
+        <div key={c.id} data-coll={c.id} data-open={isOpen || undefined}>
+          <div className={styles.collRow}>
+            <button type="button" className={styles.collBtn} onClick={() => list.toggleOpen(c.id)} aria-expanded={isOpen}>
+              <ChevronDown size={14} className={cx('ml-1 shrink-0 text-slate-400 transition-transform', !isOpen && '-rotate-90')} aria-hidden />
+              <span className={cx(styles.collLabel, here ? 'text-slate-900' : 'text-slate-600')} data-coll-title>
+                {c.title}
+              </span>
+              {here && <span className={styles.flowDot} data-tt="이어읽는 글이 이 컬렉션에" data-flow-dot />}
+            </button>
+            <span className={cx(styles.count, !pin && 'group-hover:hidden group-has-[:focus-visible]:hidden')}>{count(c.id)}</span>
+            <IconButton
+              label={`${c.title}만 보기`}
+              tip="이 컬렉션만 보기"
+              size="sm"
+              tone="row"
+              reveal={!pin}
+              onClick={() => {
+                list.setOnly(c.id)
+                if (p.bodyRef.current) p.bodyRef.current.scrollTop = 0
+              }}
+            >
+              <Maximize2 size={13} />
+            </IconButton>
+          </div>
+          <AnimatePresence initial={false}>
+            {isOpen && (
+              <m.div key="tree" {...(p.phone ? collapseNow : collapseY)} className="overflow-hidden pb-1">
+                {kidsOf(c.id)}
+                {tree(c.id)}
+              </m.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )
+    }
     if (k) {
       body = (
         <div data-coll={k.id} data-open>
@@ -179,49 +228,12 @@ export function SidebarList(p: Props) {
           </div>
           {k.path.length > 1 && <p className="px-2 text-[11px] text-slate-400">{k.path.slice(0, -1).join(' / ')}</p>}
           {k.description && <p className="mb-2 mt-1 px-2 text-[12px] leading-relaxed text-slate-500">{k.description}</p>}
+          {kidsOf(k.id)}
           {tree(k.id)}
         </div>
       )
     } else {
-      body = ix.graph.collections.map((c) => {
-        const isOpen = list.open.has(c.id)
-        // 폰은 마우스 올리기가 없어 '이 컬렉션만 보기'가 안 보였다 → 열린 컬렉션 줄엔 개수 옆에 늘 (11-27, 크기는 PC와 같게)
-        const pin = p.phone && isOpen
-        return (
-          <div key={c.id} data-coll={c.id} data-open={isOpen || undefined} style={{ paddingLeft: (c.path.length - 1) * 14 }}>
-            <div className={styles.collRow}>
-              <button type="button" className={styles.collBtn} onClick={() => list.toggleOpen(c.id)} aria-expanded={isOpen}>
-                <ChevronDown size={14} className={cx('ml-1 shrink-0 text-slate-400 transition-transform', !isOpen && '-rotate-90')} aria-hidden />
-                <span className={cx(styles.collLabel, mainCid === c.id ? 'text-slate-900' : 'text-slate-600')} data-coll-title>
-                  {c.title}
-                </span>
-                {mainCid === c.id && <span className={styles.flowDot} data-tt="이어읽는 글이 이 컬렉션에" data-flow-dot />}
-              </button>
-              <span className={cx(styles.count, !pin && 'group-hover:hidden group-has-[:focus-visible]:hidden')}>{count(c.id)}</span>
-              <IconButton
-                label={`${c.title}만 보기`}
-                tip="이 컬렉션만 보기"
-                size="sm"
-                tone="row"
-                reveal={!pin}
-                onClick={() => {
-                  list.setOnly(c.id)
-                  if (p.bodyRef.current) p.bodyRef.current.scrollTop = 0
-                }}
-              >
-                <Maximize2 size={13} />
-              </IconButton>
-            </div>
-            <AnimatePresence initial={false}>
-              {isOpen && (
-                <m.div key="tree" {...(p.phone ? collapseNow : collapseY)} className="overflow-hidden pb-1">
-                  {tree(c.id)}
-                </m.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )
-      })
+      body = colls.top.map(collection)
     }
   } else if (list.tab === 'recent') {
     body = <Recent ix={ix} main={view.main} onOpen={p.onPick} />

@@ -9,12 +9,14 @@ import { IconButton } from './ui/IconButton'
 import { SITE } from './ui/site'
 import { DocLink } from './ui/DocLink'
 import { md } from './ui/format'
+import { collectionTree, firstDocOf } from './core/collections'
 
 // 첫 화면 — 컬렉션 카드 + 최근 글 (design.md 11-24). 칸 하나에 담는다. 폰은 머리에 ☰ (목록 열기)
 export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: boolean; onMenu?: () => void; onOpen: (id: string) => void }>(function Home(
   { ix, z, phone, onMenu, onOpen },
   ref,
 ) {
+  const colls = collectionTree(ix)
   const recent = [...ix.graph.docs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title, 'ko')).slice(0, 8)
   // 폰은 문서가 스크롤된다(pane/styles frame) — 지난 글의 스크롤 자리가 남아 있으니 맨 위로. 움직임도 없음
   useLayoutEffect(() => {
@@ -33,17 +35,24 @@ export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: 
       <div className={phone ? cx(frame.scrollPage, frame.cq, frame.push, frame.slide) : frame.scroll} style={phone ? { paddingTop: frame.head } : undefined}>
         <article className={cx(frame.page, frame.padEven)}>
           <h1 className="mt-8 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 @[560px]:text-[28px]">{SITE.title}</h1>
-          <p className="mt-2 text-[15px] leading-relaxed text-slate-500">짬통에 던져 둔 글을 컬렉션별로 이어 읽는 곳.</p>
+          <p className="mt-2 text-[15px] leading-relaxed text-slate-500">블로그 만들려고 온몸비틀기</p>
           <h2 className="mb-3 mt-9 text-[11px] font-semibold uppercase tracking-wider text-slate-400">컬렉션</h2>
           <div className="grid grid-cols-[repeat(auto-fill,minmax(220px,1fr))] gap-3">
-            {ix.graph.collections.map((c) => {
-              const first = c.manifestId && ix.docsById.has(c.manifestId) ? c.manifestId : ix.tree(c.id).rows[0]?.docId
+            {colls.top.map((c) => {
+              // 최상위 컬렉션만. 개수 = 하위 컬렉션 글까지. 자기 글이 없으면 첫 하위 컬렉션의 첫 글로
+              const first = firstDocOf(ix, c.id)
+              const kids = colls.kids.get(c.id) ?? []
               const card = (
                 <>
                   {c.path.length > 1 && <span className="text-[11.5px] text-slate-400">{c.path.slice(0, -1).join(' / ')}</span>}
                   <span className="text-[16px] font-bold text-slate-900">{c.title}</span>
                   {c.description && <span className="line-clamp-3 text-[13px] leading-relaxed text-slate-500">{c.description}</span>}
-                  <span className="mt-1.5 font-mono text-[11px] tabular-nums text-slate-400">{ix.docsByCollection.get(c.id)?.length ?? 0}편</span>
+                  {kids.length > 0 && (
+                    <span className="line-clamp-2 text-[12.5px] leading-relaxed text-slate-500" data-home-kids>
+                      {kids.map((k) => k.title).join(' · ')}
+                    </span>
+                  )}
+                  <span className="mt-1.5 font-mono text-[11px] tabular-nums text-slate-400">{colls.total.get(c.id) ?? 0}편</span>
                 </>
               )
               const cls = 'flex flex-col gap-1 rounded-lg border border-line px-4 py-3.5 transition-colors'

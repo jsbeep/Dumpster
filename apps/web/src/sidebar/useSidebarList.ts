@@ -1,5 +1,6 @@
 import type { GraphIndex } from '@dumpster/schema'
 import { useEffect, useRef, useState } from 'react'
+import { collectionAncestors, withinCollection } from '../core/collections'
 
 // 사이드바 목록 상태 — 기록 밖 화면 상태(목록 탭·검색어·펼친 컬렉션·접은 갈래)는 사이드바만 갖는다.
 //   지금 보는 칸의 글(focusDoc)이 바뀌면 그 글의 컬렉션을 펼치고, 컬렉션이 바뀌었으면 다른 건 접는다
@@ -74,10 +75,10 @@ export function useSidebarList(ix: GraphIndex, focusDoc: string | null, reveal: 
     const cid = focusDoc ? ix.docsById.get(focusDoc)?.collectionId : undefined
     if (!cid) return
     if (cid !== lastCid.current) {
-      setOpen(new Set([cid]))
+      setOpen(new Set([cid, ...collectionAncestors(ix, cid)]))
       lastCid.current = cid
-    } else setOpen((s) => (s.has(cid) ? s : new Set(s).add(cid)))
-    setOnly((o) => (o && o !== cid ? cid : o))
+    } else setOpen((s) => openUp(ix, s, cid))
+    setOnly((o) => (o && !withinCollection(ix, o, cid) ? cid : o))
     scrollTo.current = focusDoc
   }, [ix, focusDoc])
 
@@ -88,8 +89,8 @@ export function useSidebarList(ix: GraphIndex, focusDoc: string | null, reveal: 
     if (!cid) return
     setTab('collections')
     setQuery('')
-    setOpen((s) => (s.has(cid) ? s : new Set(s).add(cid)))
-    setOnly((o) => (o && o !== cid ? cid : o))
+    setOpen((s) => openUp(ix, s, cid))
+    setOnly((o) => (o && !withinCollection(ix, o, cid) ? cid : o))
     scrollTo.current = reveal.id
     onReveal()
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -120,4 +121,10 @@ export function useSidebarList(ix: GraphIndex, focusDoc: string | null, reveal: 
   })
 
   return { list, bodyRef }
+}
+
+// cid와 그 위 컬렉션을 전부 펼친 집합 (이미 다 펼쳐져 있으면 같은 Set — 다시 안 그린다)
+function openUp(ix: GraphIndex, s: Set<string>, cid: string): Set<string> {
+  const want = [cid, ...collectionAncestors(ix, cid)]
+  return want.every((c) => s.has(c)) ? s : new Set([...s, ...want])
 }
