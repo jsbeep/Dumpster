@@ -1,4 +1,4 @@
-import { AnimatePresence, LayoutGroup, m } from 'framer-motion'
+import { AnimatePresence, LayoutGroup } from 'framer-motion'
 import { useCallback, useEffect, useState, type MouseEvent, type PointerEvent } from 'react'
 import type { Store } from './core/data'
 import { parseHash } from './core/route'
@@ -14,21 +14,20 @@ import { Sidebar } from './sidebar/Sidebar'
 import { useSidebar } from './sidebar/useSidebar'
 import type { RevealRequest } from './sidebar/useSidebarList'
 import { FlowSpine, Stack } from './Strips'
-import { QUICK } from './ui/motion'
 import { SITE } from './ui/site'
 import { slide } from './ui/viewTransition'
 
 // 탐색기 화면 = 사이드바 + 흐름 칸 + [왼쪽 띠] 연관 칸 [오른쪽 띠] (design.md §3 "칸")
 // 11-27 평평한 판: 바탕 그라데이션·카드·틈 없이 사이드바 | 칸 | 띠 | 칸을 1px 선으로 붙인다 (선 = 각 칸·띠의 왼쪽 테두리)
-// 폰(≤720px): 칸 하나 + 문서 스크롤, 칸 움직임 없음(B3 11-27). 사이드바는 서랍 — ☰을 누르면 칸이 오른쪽으로 밀리며 나온다(iOS처럼). 밀린 칸을 누르면 닫힘
+// 폰(≤720px): 칸 하나 + 문서 스크롤, 칸 움직임 없음(B3 11-27). 사이드바는 서랍 — ☰을 누르면 칸이 오른쪽으로 밀리며 나온다(iOS처럼). 밀린 칸을 누르면 닫힘(어둡게 안 함)
 // 여기서 갖는 화면 상태: 폰 서랍 열림 · 마우스 올린 글(트리에서 짚기) · 트리에서 보이기 요청 · 그림 크게
 
 let revealN = 0
 
 // 폰 서랍 미끄러짐 — CSS transition (11-27). framer의 x는 JS가 프레임마다 transform을 쓰는데(메인 스레드),
 // iOS 저전력 모드는 JS 애니메이션을 30fps로 묶어 버벅였다. CSS transition + cubic-bezier는 브라우저가 GPU 쪽에서 돌린다 (Chirpy와 같은 방식).
-// 곡선·길이는 ui/motion QUICK과 같게. linear()·스프링은 iOS에서 GPU로 못 넘겨 다시 30fps가 된다
-const DRAWER_SLIDE = 'transition-transform duration-200 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none'
+// 곡선은 ui/motion QUICK과 같고 길이만 조금 길게(0.28초, 11-27 사용자). linear()·스프링은 iOS에서 GPU로 못 넘겨 다시 30fps가 된다
+const DRAWER_SLIDE = 'transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none'
 
 export function Explorer({ store }: { store: Store }) {
   const ix = store.index
@@ -147,7 +146,7 @@ export function Explorer({ store }: { store: Store }) {
 
   // 폰 (B3 11-27): 칸 하나 + 문서 스크롤, 칸 움직임 없음 (사용자: 폰은 단순하게). 칸 머리는 화면 위에 붙는다(sticky, pane/styles frame).
   //   서랍 = 화면에 고정된 사이드바가 왼쪽에서 들어오고, 같은 움직임(CSS transition, DRAWER_SLIDE)으로 칸 묶음이 서랍 폭만큼 오른쪽으로 밀린다
-  //   (사용자: 이 움직임은 좋았다 — 남김). 밀린 칸은 어두운 막, 누르면 닫힘. 밀려서 화면 밖으로 나간 부분은 overflow-x-clip으로 잘라
+  //   (사용자: 이 움직임은 좋았다 — 남김). 밀린 칸 위엔 투명한 막, 누르면 닫힘. 밀려서 화면 밖으로 나간 부분은 overflow-x-clip으로 잘라
   //   가로 스크롤이 안 생기게(clip은 스크롤 상자를 안 만들어 칸 머리 sticky가 산다). 닫혀 있어도 그려 둔다 — 찾기어·트리 스크롤이 남게.
   //   탭이 있으면 펼친 탭, 없으면 흐름 글 (design.md §3 폰)
   if (phone) {
@@ -162,21 +161,8 @@ export function Explorer({ store }: { store: Store }) {
               home
             )}
           </main>
-          <AnimatePresence>
-            {drawerOpen && (
-              <m.div
-                key="scrim"
-                className="absolute inset-0 z-[90] touch-none bg-black/25"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={QUICK}
-                onClick={() => setDrawer(false)}
-                aria-hidden
-                data-scrim
-              />
-            )}
-          </AnimatePresence>
+          {/* 밀린 칸 위 투명한 막 — 누르면 닫힘, 끌어도 뒤 문서가 안 굴러감. 어둡게 하지 않는다(11-27 사용자) */}
+          {drawerOpen && <div className="absolute inset-0 z-[90] touch-none" onClick={() => setDrawer(false)} aria-hidden data-scrim />}
         </div>
         <div className={`fixed inset-y-0 left-0 z-[100] ${DRAWER_SLIDE}`} style={{ width: drawerW, transform: `translateX(${drawer ? 0 : -drawerW}px)` }}>
           {sidebarEl}

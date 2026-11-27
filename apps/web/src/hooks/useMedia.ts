@@ -12,8 +12,8 @@ export function useMedia(query: string): boolean {
   return on
 }
 
-// 폰 서랍 폭 = 창의 84% (최대 320px) — 밀린 칸이 오른쪽에 조금 남아 눌러서 닫을 자리가 된다
-const drawerWidthOf = () => Math.min(320, Math.round(innerWidth * 0.84))
+// 폰 서랍 폭 = 창의 78% (최대 296px) — 밀린 칸이 오른쪽에 조금 남아 눌러서 닫을 자리가 된다
+const drawerWidthOf = () => Math.min(296, Math.round(innerWidth * 0.78)) // 11-27 사용자: 좀 좁게 (전엔 84% · 320)
 export function useDrawerWidth(phone: boolean): number {
   const [w, setW] = useState(drawerWidthOf)
   useEffect(() => {
