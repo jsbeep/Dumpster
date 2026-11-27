@@ -1,4 +1,4 @@
-import type { Doc, GraphIndex } from '@dumpster/schema'
+import { prettifySymbols, SYMBOLS, type Doc, type GraphIndex } from '@dumpster/schema'
 import type { SearchText } from './data'
 
 // 사이드바 찾기 — 제목·별칭 (searchDocs) + 본문 (searchBody, P4.6b). 둘 다 띄어쓰기·대소문자 무시 ("용량부족" → "용량 부족 사태")
@@ -41,19 +41,21 @@ interface Folded {
   norm: string
   at: number[]
 }
+// 기호(→)는 원래 글자(->)로 편다 — 본문은 파서가 기호로 바꿨고 코드 안은 그대로라, '->'로 찾으면 둘 다 걸리게
+const UNSYMBOL = new Map(Object.entries(SYMBOLS).filter(([k]) => k !== '-->').map(([k, v]) => [v, k]))
 function fold(s: string): Folded {
   let norm = ''
   const at: number[] = []
   for (let i = 0; i < s.length; i++) {
     const ch = s[i]
     if (/\s/.test(ch)) continue
-    const lc = ch.toLowerCase() // 드물게 두 글자가 되는 것(İ)도 자리는 같은 원문 글자
+    const lc = UNSYMBOL.get(ch) ?? ch.toLowerCase() // 드물게 두 글자가 되는 것(İ)도 자리는 같은 원문 글자
     norm += lc
     for (let k = 0; k < lc.length; k++) at.push(i)
   }
   return { norm, at }
 }
-const foldQuery = (q: string) => fold(q.normalize('NFC')).norm
+const foldQuery = (q: string) => fold(prettifySymbols(q.normalize('NFC'))).norm // '-->'도 '->'로
 
 interface Piece {
   anchor: string | null

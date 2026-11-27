@@ -95,4 +95,10 @@ describe('칸 안 찾기 자리 (matchSpans)', () => {
     expect(matchSpans('아무 글', '  ')).toEqual([])
     expect(matchSpans('aaaa', 'a', 2)).toHaveLength(2)
   })
+  it('기호: "->"·"→"·"-->" 어느 걸로 찾아도 본문 →와 코드 -> 둘 다', () => {
+    const text = `빌드 → 배포${FIND_SEP}a -> b`
+    for (const q of ['->', '→', '-->', '빌드->']) expect(cut(text, q).length, q).toBeGreaterThan(0)
+    expect(cut(text, '->')).toEqual(['→', '->'])
+    expect(cut('x ⇒ y', '=>')).toEqual(['⇒'])
+  })
 })

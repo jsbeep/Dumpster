@@ -2,7 +2,7 @@ import { unified } from 'unified'
 import remarkParse from 'remark-parse'
 import remarkGfm from 'remark-gfm'
 import type * as M from 'mdast'
-import { inlinesToText, type Block, type CalloutFold, type Inline, type InlineLink, type ListItem } from '@dumpster/schema'
+import { inlinesToText, SYMBOL_PATTERN, SYMBOLS, prettifySymbols, type Block, type CalloutFold, type Inline, type InlineLink, type ListItem } from '@dumpster/schema'
 import { stripComments } from './comments'
 import { applyFence, DEFAULT_FENCES, type FenceRules } from './fences'
 import { fillQuoteFences } from './quoteFence'
@@ -421,7 +421,8 @@ class Converter {
   }
 
   private docLink(docId: string | null, headings: string[]): InlineLink {
-    const heading = headings.length ? slugifyHeading(headings[headings.length - 1]) : ''
+    // 헤딩 글자는 기호를 바꾼 뒤 앵커가 된다 → 링크 쪽도 같게 바꿔서 맞춘다
+    const heading = headings.length ? slugifyHeading(prettifySymbols(headings[headings.length - 1])) : ''
     return heading ? { kind: 'doc', docId, heading } : { kind: 'doc', docId }
   }
 
@@ -483,6 +484,18 @@ class Converter {
       k = end - 1
     }
 
+    // 기호 바꾸기 (Symbols prettifier) — 코드·지운 글자 밖에서, 서식이 같은 글자끼리만. 첫 글자를 기호로, 나머지는 지운다
+    const masked = s.replace(/[\s\S]/g, (c, k: number) => (del[k] || fmts[k].code ? '\0' : c))
+    const sym = new Map<number, string>()
+    for (const m of masked.matchAll(SYMBOL_PATTERN)) {
+      const key = fmtKey(fmts[m.index])
+      let same = true
+      for (let j = m.index + 1; j < m.index + m[0].length; j++) if (fmtKey(fmts[j]) !== key) same = false
+      if (!same) continue
+      sym.set(m.index, SYMBOLS[m[0]])
+      for (let j = m.index + 1; j < m.index + m[0].length; j++) del[j] = true
+    }
+
     // 경고만 — 코드 안 $·^[는 문법이 아니므로 가리고 본다 (MongoDB `$set` 같은 것)
     const plain = s.replace(/[\s\S]/g, (c, k: number) => (opaque[k] ? '\0' : c)) // u 플래그 없음 = UTF-16 단위라 opaque 인덱스와 맞는다
     const math = /(?:^|[^\\$])(\$(?=[^\s\0])[^$\n\0]+?(?<=[^\s\0])\$)(?!\d)/.exec(plain)
@@ -501,9 +514,10 @@ class Converter {
     for (let k = a; k < b; k++) {
       if (del[k]) continue
       const key = fmtKey(fmts[k])
-      if (cur && key === curKey) cur.text += s[k]
+      const c = sym.get(k) ?? s[k]
+      if (cur && key === curKey) cur.text += c
       else {
-        cur = toInline(s[k], fmts[k])
+        cur = toInline(c, fmts[k])
         curKey = key
         out.push(cur)
       }

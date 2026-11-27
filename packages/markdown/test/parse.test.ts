@@ -270,6 +270,35 @@ describe('헤딩 앵커', () => {
   })
 })
 
+describe('기호 바꾸기 (Symbols prettifier)', () => {
+  it('README 목록 10개 + -->', () => {
+    expect(inlines('a -> b <- c <-> d => e <= f <=> g >= h =< i +- j -+ k --> l')).toEqual([{ text: 'a → b ← c ↔ d ⇒ e ⇐ f ⇔ g ≥ h ≤ i ± j ∓ k → l' }])
+  })
+
+  it('--·!=·=== 는 그대로 (코드 표시 없는 명령 옵션)', () => {
+    expect(inlines('gpg --dearmor, a != b, a === b')).toEqual([{ text: 'gpg --dearmor, a != b, a === b' }])
+  })
+
+  it('인라인 코드·코드 블록 안은 그대로, 서식 안은 바꾼다', () => {
+    expect(inlines('`a -> b` **c -> d**')).toEqual([{ text: 'a -> b', code: true }, { text: ' ' }, { text: 'c → d', bold: true }])
+    expect(blocks('```js\nconst f = (a) => a\n```')[0]).toMatchObject({ type: 'code', text: 'const f = (a) => a' })
+  })
+
+  it('서식 경계를 넘는 건 안 바꾼다', () => {
+    expect(inlines('**a -**> b')).toEqual([{ text: 'a -', bold: true }, { text: '> b' }])
+  })
+
+  it('==형광== 표시와 섞여도 맞게', () => {
+    expect(inlines('==a==> b')).toEqual([{ text: 'a', highlight: true }, { text: '> b' }])
+  })
+
+  it('헤딩 앵커와 [[문서#헤딩]] 링크가 같은 slug', () => {
+    const [h, p] = blocks('## A -> B\n\n[[#A -> B]]')
+    expect(h).toMatchObject({ anchor: 'a--b', inlines: [{ text: 'A → B' }] })
+    expect(p).toMatchObject({ inlines: [{ link: { kind: 'doc', docId: 'self', heading: 'a--b' } }] })
+  })
+})
+
 describe('리스트', () => {
   it('탭 들여쓰기 4단', () => {
     const nest = (text: string, children: Block[] = []) => ({ inlines: [{ text }], children })
