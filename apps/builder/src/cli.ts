@@ -21,6 +21,10 @@ const vaultDir = fromRoot(vault)
 const publicFolders = (process.env.DUMPSTER_PUBLIC ?? '').split(',').map((s) => s.trim()).filter(Boolean)
 const outFile = fromRoot(process.env.DUMPSTER_OUT ?? 'out/graph.json')
 if (!publicFolders.length) console.warn('⚠ DUMPSTER_PUBLIC이 비어 있어요 — 아무것도 공개되지 않아요.')
+// 조용한 모드: 공개 레포의 Actions 로그는 누구나 본다 → 경로·제목은 빼고 개수만.
+// (비공개 링크·draft·건너뜀·경고·🗑 사라진 글에 비공개 이름이 나온다. 트리는 공개 글뿐이지만 같이 뺀다)
+// CI(GitHub Actions는 CI=true)면 기본으로 켜지고, DUMPSTER_QUIET=0으로 끌 수 있다
+const quiet = process.env.DUMPSTER_QUIET === '1' || (!!process.env.CI && process.env.DUMPSTER_QUIET !== '0')
 
 // 덮어쓰기 전에 이전 결과를 읽어 둔다 — 빌드 간 비교용 (스키마가 다르면 비교 안 함)
 let previous: Graph | null = null
@@ -63,16 +67,19 @@ if (!diff.first) {
   for (const d of diff.reidentified) marks.set(d.id, `🔁${d.what.length ? ` + ${d.what.join(', ')}` : ''}`)
 }
 
-const index = buildGraphIndex(graph)
-for (const c of graph.collections) {
-  console.log(`\n■ ${c.path.join(' / ')}  (${index.docsByCollection.get(c.id)?.length ?? 0}개)`)
-  console.log(treeToText(index, c.id, (id) => marks.get(id) ?? null))
+if (quiet) console.log('🤫 조용한 모드 — 개수만 찍어요 (자세히: DUMPSTER_QUIET=0)')
+else {
+  const index = buildGraphIndex(graph)
+  for (const c of graph.collections) {
+    console.log(`\n■ ${c.path.join(' / ')}  (${index.docsByCollection.get(c.id)?.length ?? 0}개)`)
+    console.log(treeToText(index, c.id, (id) => marks.get(id) ?? null))
+  }
 }
 
 const section = (title: string, items: string[]) => {
   if (!items.length) return
   console.log(`\n${title} ${items.length}`)
-  for (const item of items) console.log(`  - ${item}`)
+  if (!quiet) for (const item of items) console.log(`  - ${item}`)
 }
 section('⚠ 경고', report.warnings)
 section('⏭ 건너뜀', report.skipped.map((s) => `${s.relPath} (${s.reason})`))
@@ -87,10 +94,10 @@ if (diff.first) {
 } else {
   const draftIds = new Set(report.drafts.map((d) => d.id))
   console.log(
-    `\n⇄ 이전 빌드와 비교 (표시는 위 트리 줄 끝) — 🆕 새로 공개 ${diff.added.length} · ✏️ 수정 ${diff.changed.length}` +
+    `\n⇄ 이전 빌드와 비교${quiet ? '' : ' (표시는 위 트리 줄 끝)'} — 🆕 새로 공개 ${diff.added.length} · ✏️ 수정 ${diff.changed.length}` +
       ` · 🔁 ID 바뀜 ${diff.reidentified.length} · 🗑 사라짐 ${diff.removed.length} · 그대로 ${diff.unchanged}`,
   )
-  for (const d of diff.removed) console.log(`  🗑 ${d.title} — ${draftIds.has(d.id) ? 'draft로 숨김' : '삭제·비공개로 이동·공개 목록에서 뺌'}`)
+  if (!quiet) for (const d of diff.removed) console.log(`  🗑 ${d.title} — ${draftIds.has(d.id) ? 'draft로 숨김' : '삭제·비공개로 이동·공개 목록에서 뺌'}`)
 }
 
 const blockCounts = new Map<string, number>()
