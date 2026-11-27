@@ -31,7 +31,7 @@ export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: 
         </div>
       )}
       <div className={phone ? frame.scrollPage : frame.scroll}>
-        <article className={frame.page}>
+        <article className={cx(frame.page, frame.padEven)}>
           <h1 className="mt-8 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 @[560px]:text-[28px]">{SITE.title}</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-slate-500">짬통에 던져 둔 글을 컬렉션별로 이어 읽는 곳.</p>
           <h2 className="mb-3 mt-9 text-[11px] font-semibold uppercase tracking-wider text-slate-400">컬렉션</h2>

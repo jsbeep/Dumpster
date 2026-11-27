@@ -30,6 +30,7 @@ interface Props {
   slot: Slot
   view: View
   crumbs: boolean // 사이드바 트리가 화면에 없음 → 맨 위 줄을 브레드크럼으로
+  tocRail: boolean // 오른쪽 위 목차 줄이 있음 → 좁은 칸에서 오른쪽 여백을 그만큼 (pane/styles frame.padToc)
   articleRef: RefObject<HTMLElement> // 칸 폭 따라가기(useWidthFollow)·찾기가 재는 본문
   dispatch: (action: Action, land?: Land) => void
   onJump: (anchor: string) => void // 이 칸 안의 그 id까지 스크롤
@@ -40,7 +41,7 @@ interface Props {
 // memo — 칸은 읽는 위치(목차 줄·칸 머리 제목)가 바뀔 때마다 다시 그려진다. 헤딩이 칸 위를 지날 때마다 본문 블록을
 // 전부 다시 그리면 폰에서 그 프레임이 길어져 버벅였다(11-27 측정: 헤딩 4개 글 한 번 내리는 동안 5번, 최장 프레임 35ms).
 // 그래서 props는 전부 안 바뀌는 값으로 넘긴다 (Pane의 jump는 useCallback)
-export const Article = memo(function Article({ ix, doc, slot, view, crumbs, articleRef, dispatch, onJump, onReveal, onZoom }: Props) {
+export const Article = memo(function Article({ ix, doc, slot, view, crumbs, tocRail, articleRef, dispatch, onJump, onReveal, onZoom }: Props) {
   const onOpenDoc = useCallback((id: string, heading?: string) => dispatch({ type: 'link', id }, heading ? { anchor: heading } : undefined), [dispatch])
   const prevId = ix.prevOf.get(doc.id)
   const prev = prevId ? ix.docsById.get(prevId) : undefined
@@ -51,7 +52,7 @@ export const Article = memo(function Article({ ix, doc, slot, view, crumbs, arti
   return (
     <article
       ref={articleRef}
-      className={cx(frame.page, '[&_figure_img]:cursor-zoom-in')}
+      className={cx(frame.page, tocRail ? frame.padToc : frame.padEven, '[&_figure_img]:cursor-zoom-in')}
       onClick={(e) => {
         // 본문 그림 누르면 크게 (북마크 카드 그림은 링크라 제외)
         const img = (e.target as HTMLElement).closest('img')

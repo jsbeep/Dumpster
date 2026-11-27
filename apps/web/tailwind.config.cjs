@@ -24,4 +24,8 @@ module.exports = {
   },
   // 칸 폭에 따라 본문 여백·이전/다음 카드 배치를 바꾼다 (@container / @[560px]:)
   plugins: [require('@tailwindcss/container-queries')],
+  // hover:·group-hover:는 마우스 기기에서만 (@media (hover: hover) and (pointer: fine)). 폰은 탭하면 hover가 걸리는데,
+  // 그 hover로 보이는 게 바뀌면(컬렉션 줄의 개수 숨김·'이 컬렉션만 보기' 나타남) iOS는 첫 탭을 hover로만 쓰고 클릭을 안 보낸다
+  // → 두 번 눌러야 펼쳐졌다 (11-27). 눌린 뒤 hover 바탕이 남는 것도 같이 없어진다. 폰에선 '이 컬렉션만 보기'가 안 보임
+  future: { hoverOnlyWhenSupported: true },
 }

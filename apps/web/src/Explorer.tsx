@@ -1,4 +1,4 @@
-import { AnimatePresence, LayoutGroup } from 'framer-motion'
+import { AnimatePresence, LayoutGroup, m } from 'framer-motion'
 import { useCallback, useEffect, useState, type MouseEvent, type PointerEvent } from 'react'
 import type { Store } from './core/data'
 import { parseHash } from './core/route'
@@ -13,11 +13,12 @@ import { Sidebar } from './sidebar/Sidebar'
 import { useSidebar } from './sidebar/useSidebar'
 import type { RevealRequest } from './sidebar/useSidebarList'
 import { FlowSpine, Stack } from './Strips'
+import { QUICK } from './ui/motion'
 import { SITE } from './ui/site'
 
 // 탐색기 화면 = 사이드바 + 흐름 칸 + [왼쪽 띠] 연관 칸 [오른쪽 띠] (design.md §3 "칸")
 // 11-27 평평한 판: 바탕 그라데이션·카드·틈 없이 사이드바 | 칸 | 띠 | 칸을 1px 선으로 붙인다 (선 = 각 칸·띠의 왼쪽 테두리)
-// 폰(≤720px): 칸 하나 + 문서 스크롤, 움직임 없음(B3 11-27). 사이드바는 서랍 — ☰을 누르면 화면 왼쪽에 바로 뜨고, 어두운 막을 누르면 닫힘
+// 폰(≤720px): 칸 하나 + 문서 스크롤, 칸 움직임 없음(B3 11-27). 사이드바는 서랍 — ☰을 누르면 칸이 오른쪽으로 밀리며 나온다(iOS처럼). 밀린 칸을 누르면 닫힘
 // 여기서 갖는 화면 상태: 폰 서랍 열림 · 마우스 올린 글(트리에서 짚기) · 트리에서 보이기 요청 · 그림 크게
 
 let revealN = 0
@@ -127,24 +128,42 @@ export function Explorer({ store }: { store: Store }) {
   )
   const home = <Home key="home" ix={ix} z={Z.main} phone={phone} onMenu={onMenu} onOpen={(id) => dispatch({ type: 'open', id })} />
 
-  // 폰 (B3 11-27): 칸 하나 + 문서 스크롤, 움직임 없음 (사용자: 폰은 단순하게). 칸 머리는 화면 위에 붙는다(sticky, pane/styles frame).
-  //   서랍 = 화면에 고정된 사이드바 + 어두운 막, 열고 닫을 때 바로. 닫혀 있어도 그려 둔다(invisible) — 찾기어·트리 스크롤이 남게.
+  // 폰 (B3 11-27): 칸 하나 + 문서 스크롤, 칸 움직임 없음 (사용자: 폰은 단순하게). 칸 머리는 화면 위에 붙는다(sticky, pane/styles frame).
+  //   서랍 = 화면에 고정된 사이드바가 왼쪽에서 들어오고, 같은 움직임으로 칸 묶음이 서랍 폭만큼 오른쪽으로 밀린다
+  //   (사용자: 이 움직임은 좋았다 — 남김). 밀린 칸은 어두운 막, 누르면 닫힘. 밀려서 화면 밖으로 나간 부분은 overflow-x-clip으로 잘라
+  //   가로 스크롤이 안 생기게(clip은 스크롤 상자를 안 만들어 칸 머리 sticky가 산다). 닫혀 있어도 그려 둔다 — 찾기어·트리 스크롤이 남게.
   //   탭이 있으면 펼친 탭, 없으면 흐름 글 (design.md §3 폰)
   if (phone) {
     const shown = hasRel && active ? ['rel', active] as const : view.main ? ['main', view.main] as const : null
     return (
-      <div className="relative min-h-dvh bg-page font-sans text-slate-900 antialiased">
-        <main className="relative min-w-0" onPointerDown={onPanesDown} data-panes="one">
-          {shown ? (
-            <Pane key={`${shown[0]}:${shown[1]}`} slot={shown[0]} docId={shown[1]} dir={0} half={false} z={Z.main} focused {...paneProps} />
-          ) : (
-            home
-          )}
-        </main>
-        {drawerOpen && <div className="fixed inset-0 z-[90] touch-none bg-black/25" onClick={() => setDrawer(false)} aria-hidden data-scrim />}
-        <div className={drawerOpen ? 'fixed inset-y-0 left-0 z-[100]' : 'invisible fixed inset-y-0 left-0 z-[100]'} style={{ width: drawerW }}>
+      <div className="relative min-h-dvh overflow-x-clip bg-page font-sans text-slate-900 antialiased">
+        <m.div className="relative" initial={false} animate={{ x: drawer ? drawerW : 0 }} transition={QUICK}>
+          <main className="relative min-w-0" onPointerDown={onPanesDown} data-panes="one">
+            {shown ? (
+              <Pane key={`${shown[0]}:${shown[1]}`} slot={shown[0]} docId={shown[1]} dir={0} half={false} z={Z.main} focused {...paneProps} />
+            ) : (
+              home
+            )}
+          </main>
+          <AnimatePresence>
+            {drawerOpen && (
+              <m.div
+                key="scrim"
+                className="absolute inset-0 z-[90] touch-none bg-black/25"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={QUICK}
+                onClick={() => setDrawer(false)}
+                aria-hidden
+                data-scrim
+              />
+            )}
+          </AnimatePresence>
+        </m.div>
+        <m.div className="fixed inset-y-0 left-0 z-[100]" style={{ width: drawerW }} initial={false} animate={{ x: drawer ? 0 : -drawerW }} transition={QUICK}>
           {sidebarEl}
-        </div>
+        </m.div>
         <Lightbox zoom={zoom} onClose={() => setZoom(null)} />
       </div>
     )

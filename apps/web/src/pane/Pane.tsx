@@ -48,6 +48,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   const title = doc?.title ?? meta?.title ?? ''
   const heads = (doc?.blocks.filter((b) => b.type === 'heading') ?? []) as BlockOf<'heading'>[]
   const hasRel = view.tabs.length > 0
+  const tocRail = !p.phone && heads.length >= 2 // PC 오른쪽 위 목차 줄 (폰은 칸 머리 목차)
 
   const scrollRef = useRef<HTMLDivElement>(null)
   const { spy, onScroll: spyScroll } = useScrollSpy(scrollRef, heads)
@@ -121,12 +122,12 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
           <div className="relative flex min-h-0 flex-1">
             <div className={p.phone ? frame.scrollPage : frame.scroll} ref={scrollRef} onScroll={p.phone ? undefined : onScroll} data-scroll={p.phone ? 'page' : ''}>
               {doc ? (
-                <Article ix={ix} doc={doc} slot={slot} view={view} crumbs={p.crumbs} articleRef={articleRef} dispatch={dispatch} onJump={jump} onReveal={p.onReveal} onZoom={p.onZoom} />
+                <Article ix={ix} doc={doc} slot={slot} view={view} crumbs={p.crumbs} tocRail={tocRail} articleRef={articleRef} dispatch={dispatch} onJump={jump} onReveal={p.onReveal} onZoom={p.onZoom} />
               ) : doc === null || !meta ? (
                 <Gone />
               ) : null}
             </div>
-            {!p.phone && heads.length >= 2 && <Toc heads={heads} current={spy.heading} onGo={jump} />}
+            {tocRail && <Toc heads={heads} current={spy.heading} onGo={jump} />}
           </div>
         </m.div>
         {p.flash?.slot === slot && (

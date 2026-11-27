@@ -47,6 +47,12 @@ body {
   body {
     overflow: visible;
   }
+  /* 맨 위에서 끌어 내리면 문서가 통째로 튕겨(iOS 바운스) 화면 위에 붙은 칸 머리(sticky)까지 같이 내려갔다 —
+     튕김·당겨서 새로고침을 끈다 (11-27). 머리를 position: fixed로 바꾸면 튕김은 남기고 머리만 서 있게 할 수 있지만
+     칸 머리 높이만큼 자리 띄우기 + 서랍이 칸을 미는 transform 안에서 fixed가 풀리는 문제가 따라온다 */
+  html {
+    overscroll-behavior-y: none;
+  }
 }
 * {
   scrollbar-width: thin;
