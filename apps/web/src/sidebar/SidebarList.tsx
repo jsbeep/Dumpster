@@ -39,7 +39,7 @@ const styles = {
   divider: 'mx-3 my-2.5 h-px shrink-0 bg-line',
   body: 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-2 pb-3', // 끝까지 굴려도 뒤(폰은 문서)가 안 따라 굴러감
   // 컬렉션 줄 (mongolive ConnectionsTree 행)
-  collRow: 'group flex h-8 w-full shrink-0 items-center gap-1.5 rounded-md pr-1 text-left text-[13px] transition-colors hover:bg-side-hover',
+  collRow: 'group flex h-8 max-[720px]:h-10 w-full shrink-0 items-center gap-1.5 rounded-md pr-1 text-left text-[13px] transition-colors hover:bg-side-hover',
   collBtn: 'flex min-w-0 flex-1 items-center gap-1.5 self-stretch pl-0.5 text-left',
   collLabel: 'min-w-0 flex-1 truncate font-semibold',
   count: 'shrink-0 pr-1 font-mono text-[11px] tabular-nums text-slate-400',
@@ -182,6 +182,8 @@ export function SidebarList(p: Props) {
       const mainCid = view.main ? ix.docsById.get(view.main)?.collectionId : null
       body = ix.graph.collections.map((c) => {
         const isOpen = list.open.has(c.id)
+        // 폰은 마우스 올리기가 없어 '이 컬렉션만 보기'가 안 보였다 → 열린 컬렉션 줄엔 개수 대신 늘 (PC에서 마우스 올린 모양, 11-27)
+        const pin = p.phone && isOpen
         return (
           <div key={c.id} data-coll={c.id} data-open={isOpen || undefined} style={{ paddingLeft: (c.path.length - 1) * 14 }}>
             <div className={styles.collRow}>
@@ -191,13 +193,13 @@ export function SidebarList(p: Props) {
                   {c.title}
                 </span>
               </button>
-              <span className={cx(styles.count, 'group-hover:hidden group-focus-within:hidden')}>{count(c.id)}</span>
+              <span className={cx(styles.count, pin ? 'hidden' : 'group-hover:hidden group-focus-within:hidden')}>{count(c.id)}</span>
               <IconButton
                 label={`${c.title}만 보기`}
                 tip="이 컬렉션만 보기"
-                size="sm"
+                size={pin ? 'lg' : 'sm'}
                 tone="row"
-                reveal
+                reveal={!pin}
                 onClick={() => {
                   list.setOnly(c.id)
                   if (p.bodyRef.current) p.bodyRef.current.scrollTop = 0
