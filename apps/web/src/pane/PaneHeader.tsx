@@ -1,12 +1,13 @@
 import { cx } from '@dumpster/blocks'
 import type { GraphIndex } from '@dumpster/schema'
 import { m } from 'framer-motion'
-import { ChevronLeft, Menu, PanelLeftClose, PanelRightClose, Search, SquareArrowUpRight, X } from 'lucide-react'
+import { ChevronDown, ChevronLeft, Menu, PanelLeftClose, PanelRightClose, Search, SquareArrowUpRight, X } from 'lucide-react'
 import type { Action, Slot, View } from '../core/view'
 import { IconButton } from '../ui/IconButton'
 import { frame } from './styles'
 
-// 칸 머리: [☰ 폰 목록] [‹ 폰 뒤로] 흐름|연관 n/m [흐름 칸으로] (스크롤하면 제목 + 밑줄) [찾기] [모두 닫기] [접기] [×]
+// 칸 머리: [☰ 폰 목록] [‹ 폰 뒤로] 이어읽기|건너읽기 n/m [이어읽기 칸으로] (스크롤하면 제목 + 밑줄) [찾기] [모두 닫기] [접기] [×]
+// 폰에서 헤딩이 둘 이상이면 가운데가 목차 버튼(B4) — 지금 읽는 헤딩 ▾, 누르면 머리 밑으로 목록 (Pane · Toc TocSheet)
 
 const styles = {
   lane: 'shrink-0 whitespace-nowrap px-1.5 text-[11.5px] font-semibold',
@@ -14,6 +15,7 @@ const styles = {
   laneFocus: 'text-slate-900',
   textBtn: 'h-7 max-[720px]:h-10 shrink-0 whitespace-nowrap rounded-md px-2 text-[12px] text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
   headTitle: 'min-w-0 flex-1 truncate px-1.5 text-[13px] font-semibold text-slate-700',
+  tocBtn: 'flex h-10 min-w-0 flex-1 items-center gap-1 rounded-md px-1.5 text-left text-[13.5px]',
   back: 'flex h-10 max-w-[46%] shrink-0 items-center gap-1 rounded-md pl-1 pr-2 text-[13.5px] text-slate-500 hover:bg-hover hover:text-slate-900',
 } as const
 
@@ -29,11 +31,12 @@ interface Props {
   focused: boolean // 칸이 둘일 때 "이어읽기"/"건너읽기" 글자를 진하게
   onMenu?: () => void
   onFind: () => void
+  toc?: { label: string | null; open: boolean; onToggle: () => void } // 폰 목차 버튼 (label 없으면 '목차')
   onReveal: (docId: string) => void
   dispatch: (action: Action) => void
 }
 
-export function PaneHeader({ ix, view, slot, docId, title, showTitle, canFind, phone, focused, onMenu, onFind, onReveal, dispatch }: Props) {
+export function PaneHeader({ ix, view, slot, docId, title, showTitle, canFind, phone, focused, onMenu, onFind, toc, onReveal, dispatch }: Props) {
   const n = view.tabs.length
   const hasRel = n > 0
   const backTo = slot === 'rel' ? (view.active > 0 ? view.tabs[view.active - 1] : view.main) : null
@@ -69,9 +72,16 @@ export function PaneHeader({ ix, view, slot, docId, title, showTitle, canFind, p
           <SquareArrowUpRight size={16} />
         </IconButton>
       )}
-      <m.span className={styles.headTitle} initial={false} animate={{ opacity: showTitle ? 1 : 0 }} transition={{ duration: 0.15 }} data-head-title={showTitle || undefined}>
-        {title}
-      </m.span>
+      {toc ? (
+        <button type="button" className={styles.tocBtn} onClick={toc.onToggle} aria-expanded={toc.open} aria-label={`목차 — ${toc.label ?? title}`} data-phone-toc>
+          <span className={cx('truncate', toc.label ? 'font-semibold text-slate-700' : 'font-medium text-slate-400')}>{toc.label ?? '목차'}</span>
+          <ChevronDown size={15} className={cx('shrink-0 text-slate-400', toc.open && 'rotate-180')} aria-hidden />
+        </button>
+      ) : (
+        <m.span className={styles.headTitle} initial={false} animate={{ opacity: showTitle ? 1 : 0 }} transition={{ duration: 0.15 }} data-head-title={showTitle || undefined}>
+          {title}
+        </m.span>
+      )}
       {canFind && (
         <IconButton label="이 글에서 찾기" tip="이 글에서 찾기 (Ctrl+F)" onClick={() => onFind()} data-find-open>
           <Search size={15} />

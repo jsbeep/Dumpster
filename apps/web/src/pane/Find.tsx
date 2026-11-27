@@ -1,6 +1,7 @@
 import { ChevronDown, ChevronUp, Search, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react'
 import { FIND_SEP, matchSpans } from '../core/search'
+import { scrollerOf, viewOf } from './useScroll'
 import type { Slot } from '../core/view'
 import { useKeyDown } from '../hooks/useKeys'
 import { IconButton } from '../ui/IconButton'
@@ -72,7 +73,7 @@ export function findRanges(root: HTMLElement, query: string): Range[] {
 // 지금 보이는 곳부터 — 화면 위쪽 끝 아래에 있는 첫 일치 (없으면 처음)
 function firstFrom(ranges: Range[], sc: HTMLElement | null) {
   if (!sc) return 0
-  const top = sc.getBoundingClientRect().top
+  const top = viewOf(sc).top
   const i = ranges.findIndex((r) => r.getBoundingClientRect().bottom > top)
   return Math.max(0, i)
 }
@@ -88,8 +89,8 @@ function reveal(r: Range, sc: HTMLElement) {
   }
   const go = () => {
     const rect = r.getBoundingClientRect()
-    const box = sc.getBoundingClientRect()
-    if (rect.top < box.top + 40 || rect.bottom > box.bottom - 24) sc.scrollTop += rect.top - box.top - box.height / 3
+    const box = viewOf(sc) // 폰은 문서가 스크롤된다 (useScroll scrollerOf)
+    if (rect.top < box.top + 40 || rect.bottom > box.bottom - 24) scrollerOf(sc).scrollTop += rect.top - box.top - (box.bottom - box.top) / 3
     for (let el = r.startContainer.parentElement; el && el !== sc; el = el.parentElement) {
       if (el.scrollWidth <= el.clientWidth + 1) continue
       const ox = getComputedStyle(el).overflowX

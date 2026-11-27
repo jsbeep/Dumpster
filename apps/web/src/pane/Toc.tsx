@@ -3,10 +3,11 @@ import { AnimatePresence, m } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import { popIn } from '../ui/motion'
 
-// 목차 — 칸 오른쪽 위 줄(헤딩마다 한 줄, 수준별 길이). 마우스를 올리면 열리고(조금 늦게 닫힘), 누르기로도 연다(폰)
+// 목차 — PC: 칸 오른쪽 위 줄(헤딩마다 한 줄, 수준별 길이). 마우스를 올리면 열리고(조금 늦게 닫힘), 누르기로도 연다
+//        폰(B4): 칸 머리 가운데 = 지금 읽는 헤딩, 누르면 머리 밑으로 펼쳐지는 목록(TocSheet). 움직임 없이 바로 열고 닫는다
 
 const TOC_W = [18, 13, 9, 7, 6, 6]
-const headText = (h: BlockOf<'heading'>) => h.inlines.map((x) => x.text).join('')
+export const headText = (h: BlockOf<'heading'>) => h.inlines.map((x) => x.text).join('')
 
 export function Toc({ heads, current, onGo }: { heads: BlockOf<'heading'>[]; current: string | null; onGo: (anchor: string) => void }) {
   const [open, setOpen] = useState(false)
@@ -69,6 +70,41 @@ export function Toc({ heads, current, onGo }: { heads: BlockOf<'heading'>[]; cur
           </m.div>
         )}
       </AnimatePresence>
+    </nav>
+  )
+}
+
+// 폰 목차 — 칸 머리 묶음([data-sticky]) 안, 머리 밑에 펼쳐진다. 밖을 누르면 닫힘(머리의 여닫기 버튼 [data-phone-toc]은 제가 토글).
+// 헤딩을 누르면 닫고 나서 간다 — 열린 목록 높이까지 칸 머리로 쳐서 자리를 재면 그만큼 덜 내려간다
+export function TocSheet({ heads, current, onGo, onClose }: { heads: BlockOf<'heading'>[]; current: string | null; onGo: (anchor: string) => void; onClose: () => void }) {
+  const ref = useRef<HTMLElement>(null)
+  useEffect(() => {
+    const close = (e: PointerEvent) => {
+      const t = e.target as Element
+      if (!ref.current?.contains(t) && !t.closest('[data-phone-toc]')) onClose()
+    }
+    document.addEventListener('pointerdown', close)
+    return () => document.removeEventListener('pointerdown', close)
+  }, [onClose])
+  const minLv = Math.min(...heads.map((h) => h.level))
+  return (
+    <nav ref={ref} aria-label="목차" className="max-h-[60vh] overflow-y-auto overscroll-contain border-b border-line py-1" data-toc-sheet>
+      {heads.map((h) => (
+        <button
+          key={h.anchor}
+          type="button"
+          className={cx('block w-full py-2.5 pr-4 text-left text-[14.5px] leading-snug', h.anchor === current ? 'font-semibold text-slate-900' : 'text-slate-500')}
+          style={{ paddingLeft: 16 + (h.level - minLv) * 14 }}
+          onClick={() => {
+            onClose()
+            requestAnimationFrame(() => onGo(h.anchor))
+          }}
+          data-toc-item
+          data-on={h.anchor === current || undefined}
+        >
+          {headText(h)}
+        </button>
+      ))}
     </nav>
   )
 }

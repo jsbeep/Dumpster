@@ -1,4 +1,4 @@
-import { AnimatePresence, LayoutGroup, m } from 'framer-motion'
+import { AnimatePresence, LayoutGroup } from 'framer-motion'
 import { useCallback, useEffect, useState, type MouseEvent, type PointerEvent } from 'react'
 import type { Store } from './core/data'
 import { parseHash } from './core/route'
@@ -13,12 +13,11 @@ import { Sidebar } from './sidebar/Sidebar'
 import { useSidebar } from './sidebar/useSidebar'
 import type { RevealRequest } from './sidebar/useSidebarList'
 import { FlowSpine, Stack } from './Strips'
-import { QUICK } from './ui/motion'
 import { SITE } from './ui/site'
 
 // 탐색기 화면 = 사이드바 + 흐름 칸 + [왼쪽 띠] 연관 칸 [오른쪽 띠] (design.md §3 "칸")
 // 11-27 평평한 판: 바탕 그라데이션·카드·틈 없이 사이드바 | 칸 | 띠 | 칸을 1px 선으로 붙인다 (선 = 각 칸·띠의 왼쪽 테두리)
-// 폰(≤720px): 사이드바는 서랍 — ☰을 누르면 사이드바+칸 묶음이 통째로 오른쪽으로 밀리며 나온다(iOS처럼). 밀린 칸을 누르면 닫힘
+// 폰(≤720px): 칸 하나 + 문서 스크롤, 움직임 없음(B3 11-27). 사이드바는 서랍 — ☰을 누르면 화면 왼쪽에 바로 뜨고, 어두운 막을 누르면 닫힘
 // 여기서 갖는 화면 상태: 폰 서랍 열림 · 마우스 올린 글(트리에서 짚기) · 트리에서 보이기 요청 · 그림 크게
 
 let revealN = 0
@@ -102,79 +101,82 @@ export function Explorer({ store }: { store: Store }) {
   // 두 칸이 나란히면 흐름 칸은 반 — 띠가 몇 개든 흐름 칸 폭은 그대로, 띠는 연관 쪽에서만 빠진다
   const half = !phone && hasRel && !coll
 
+  const sidebarEl = (
+    <Sidebar
+      sidebar={sidebar}
+      phone={phone}
+      drawerWidth={drawerW}
+      onDrawerOpen={() => setDrawer(true)}
+      onDrawerClose={() => setDrawer(false)}
+      ix={ix}
+      store={store}
+      view={view}
+      focusDoc={focusDoc}
+      hl={[hover, rowFlash]}
+      reveal={reveal}
+      onOpen={(id, land) => {
+        dispatch({ type: 'open', id, solo: phone }, land)
+        setDrawer(false)
+      }}
+      onScan={(id) => dispatch({ type: 'open', id, scan: true })}
+      onHome={() => {
+        dispatch({ type: 'home' })
+        setDrawer(false)
+      }}
+    />
+  )
+  const home = <Home key="home" ix={ix} z={Z.main} phone={phone} onMenu={onMenu} onOpen={(id) => dispatch({ type: 'open', id })} />
+
+  // 폰 (B3 11-27): 칸 하나 + 문서 스크롤, 움직임 없음 (사용자: 폰은 단순하게). 칸 머리는 화면 위에 붙는다(sticky, pane/styles frame).
+  //   서랍 = 화면에 고정된 사이드바 + 어두운 막, 열고 닫을 때 바로. 닫혀 있어도 그려 둔다(invisible) — 찾기어·트리 스크롤이 남게.
+  //   탭이 있으면 펼친 탭, 없으면 흐름 글 (design.md §3 폰)
+  if (phone) {
+    const shown = hasRel && active ? ['rel', active] as const : view.main ? ['main', view.main] as const : null
+    return (
+      <div className="relative min-h-dvh bg-page font-sans text-slate-900 antialiased">
+        <main className="relative min-w-0" onPointerDown={onPanesDown} data-panes="one">
+          {shown ? (
+            <Pane key={`${shown[0]}:${shown[1]}`} slot={shown[0]} docId={shown[1]} dir={0} half={false} z={Z.main} focused {...paneProps} />
+          ) : (
+            home
+          )}
+        </main>
+        {drawerOpen && <div className="fixed inset-0 z-[90] touch-none bg-black/25" onClick={() => setDrawer(false)} aria-hidden data-scrim />}
+        <div className={drawerOpen ? 'fixed inset-y-0 left-0 z-[100]' : 'invisible fixed inset-y-0 left-0 z-[100]'} style={{ width: drawerW }}>
+          {sidebarEl}
+        </div>
+        <Lightbox zoom={zoom} onClose={() => setZoom(null)} />
+      </div>
+    )
+  }
+
   return (
     <div className="relative h-full overflow-hidden bg-page font-sans text-slate-900 antialiased">
-      {/* 폰: 사이드바(서랍 폭)+칸을 한 줄로 놓고 서랍 폭만큼 왼쪽으로 밀어 둔다 — 열면 0으로 */}
-      <m.div
-        className="flex h-full"
-        style={{ width: phone ? `calc(100% + ${drawerW}px)` : '100%' }}
-        initial={false}
-        animate={{ x: phone && !drawer ? -drawerW : 0 }}
-        transition={QUICK}
-      >
-        <Sidebar
-          sidebar={sidebar}
-          phone={phone}
-          drawerWidth={drawerW}
-          onDrawerOpen={() => setDrawer(true)}
-          onDrawerClose={() => setDrawer(false)}
-          ix={ix}
-          store={store}
-          view={view}
-          focusDoc={focusDoc}
-          hl={[hover, rowFlash]}
-          reveal={reveal}
-          onOpen={(id, land) => {
-            dispatch({ type: 'open', id, solo: phone }, land)
-            setDrawer(false)
-          }}
-          onScan={(id) => dispatch({ type: 'open', id, scan: true })}
-          onHome={() => {
-            dispatch({ type: 'home' })
-            setDrawer(false)
-          }}
-        />
+      <div className="flex h-full w-full">
+        {sidebarEl}
         <main className="relative min-w-0 flex-1 overflow-hidden" onPointerDown={onPanesDown} onMouseOver={onPanesOver} onMouseLeave={() => setHover(null)}>
           <LayoutGroup>
             <div className="flex h-full w-full overflow-hidden" data-panes={hasRel ? 'two' : 'one'}>
               <AnimatePresence initial={false} mode="popLayout">
-                {!view.main ? (
-                  <Home key="home" ix={ix} z={Z.main} phone={phone} onMenu={onMenu} onOpen={(id) => dispatch({ type: 'open', id })} />
-                ) : (
-                  [
-                    coll === 'main' && hasRel ? (
-                      <FlowSpine key="spine" z={Z.main} title={ix.docsById.get(view.main)?.title ?? '없는 글'} dispatch={dispatch} />
-                    ) : phone && hasRel ? null : (
-                      <Pane key={`main:${view.main}`} slot="main" docId={view.main} dir={dir.main} half={half} z={Z.main} focused={slot === 'main'} {...paneProps} />
-                    ),
-                    leftTabs > 0 && <Stack key="stack-left" ix={ix} view={view} side="left" z={Z.left} phone={phone} dispatch={dispatch} />,
-                    hasRel && active && coll !== 'rel' && (
-                      <Pane key={`rel:${active}`} slot="rel" docId={active} dir={dir.rel} half={false} z={Z.rel} focused={slot === 'rel'} {...paneProps} />
-                    ),
-                    rightTabs > 0 && <Stack key="stack-right" ix={ix} view={view} side="right" z={Z.right} phone={phone} dispatch={dispatch} />,
-                  ]
-                )}
+                {!view.main
+                  ? home
+                  : [
+                      coll === 'main' && hasRel ? (
+                        <FlowSpine key="spine" z={Z.main} title={ix.docsById.get(view.main)?.title ?? '없는 글'} dispatch={dispatch} />
+                      ) : (
+                        <Pane key={`main:${view.main}`} slot="main" docId={view.main} dir={dir.main} half={half} z={Z.main} focused={slot === 'main'} {...paneProps} />
+                      ),
+                      leftTabs > 0 && <Stack key="stack-left" ix={ix} view={view} side="left" z={Z.left} phone={phone} dispatch={dispatch} />,
+                      hasRel && active && coll !== 'rel' && (
+                        <Pane key={`rel:${active}`} slot="rel" docId={active} dir={dir.rel} half={false} z={Z.rel} focused={slot === 'rel'} {...paneProps} />
+                      ),
+                      rightTabs > 0 && <Stack key="stack-right" ix={ix} view={view} side="right" z={Z.right} phone={phone} dispatch={dispatch} />,
+                    ]}
               </AnimatePresence>
             </div>
           </LayoutGroup>
-          {/* 폰 서랍이 열렸을 때 밀린 칸 — 누르면 닫힘 */}
-          <AnimatePresence>
-            {drawerOpen && (
-              <m.div
-                key="scrim"
-                className="absolute inset-0 z-[90] bg-black/25"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={QUICK}
-                onClick={() => setDrawer(false)}
-                aria-hidden
-                data-scrim
-              />
-            )}
-          </AnimatePresence>
         </main>
-      </m.div>
+      </div>
 
       <Lightbox zoom={zoom} onClose={() => setZoom(null)} />
     </div>

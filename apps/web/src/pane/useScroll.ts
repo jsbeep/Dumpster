@@ -7,6 +7,25 @@ import type { Landing } from '../hooks/useView'
 
 // 칸 안 스크롤 — 읽던 자리 기억 · 읽는 위치 재기 · 글을 연 뒤 갈 곳(헤딩 · 가리키는 블록 · 찾기)
 // 헤딩 id = anchor라 두 칸에 같은 헤딩이 있으면 id가 겹친다 → 늘 칸(스크롤 상자) 안에서 찾는다
+//
+// 스크롤 상자: PC는 칸 안 [data-scroll] div. 폰(≤720px, B3 11-27)은 문서 전체가 스크롤된다(data-scroll="page") —
+//   주소창이 접히고 상태바를 누르면 맨 위로. 그땐 [data-scroll]은 늘어나기만 하고, 스크롤 값은 document.scrollingElement,
+//   보이는 위쪽 끝은 화면 위에 붙은 칸 머리([data-sticky]) 밑. 자리를 재고 옮기는 곳은 전부 scrollerOf · viewOf를 거친다
+const isPage = (sc: Element) => (sc as HTMLElement).dataset.scroll === 'page'
+export const scrollerOf = (sc: Element): Element => (isPage(sc) ? (document.scrollingElement ?? document.documentElement) : sc)
+export function viewOf(sc: Element): { top: number; bottom: number } {
+  if (!isPage(sc)) {
+    const r = sc.getBoundingClientRect()
+    return { top: r.top, bottom: r.bottom }
+  }
+  const head = sc.closest('[data-slot]')?.querySelector('[data-sticky]')
+  return { top: head ? head.getBoundingClientRect().bottom : 0, bottom: window.innerHeight }
+}
+// 상자 안의 요소를 보이는 위쪽 끝에서 off만큼 아래에 오게
+function scrollElTo(sc: Element, el: Element, off: number, instant: boolean) {
+  const box = scrollerOf(sc)
+  box.scrollTo({ top: el.getBoundingClientRect().top - viewOf(sc).top + box.scrollTop - off, behavior: instant || reducedMotion() ? 'auto' : 'smooth' })
+}
 
 const SPY_TOP = 48 // 칸 위에서 이만큼 안에 들어온 헤딩 = 지금 읽는 곳
 
@@ -15,11 +34,7 @@ const reducedMotion = () => matchMedia('(prefers-reduced-motion: reduce)').match
 // 그 요소가 칸 맨 위(12px 틈)에 오게. 움직임 줄이기(OS 설정)거나 instant면 바로
 export function scrollToEl(el: Element, instant = false) {
   const sc = el.closest('[data-scroll]')
-  if (!sc) return
-  sc.scrollTo({
-    top: el.getBoundingClientRect().top - sc.getBoundingClientRect().top + sc.scrollTop - 12,
-    behavior: instant || reducedMotion() ? 'auto' : 'smooth',
-  })
+  if (sc) scrollElTo(sc, el, 12, instant)
 }
 
 export function scrollToAnchor(sc: HTMLElement | null, anchor: string, instant = false) {
@@ -38,10 +53,9 @@ function landOnLink(root: HTMLElement, sc: HTMLElement, id: string) {
   const near = a.closest(TEXT_BLOCK)
   const el = near && body.contains(near) ? near : a
   for (let d = el.parentElement?.closest('details'); d; d = d.parentElement?.closest('details')) d.open = true // 접힌 콜아웃
-  const r = el.getBoundingClientRect()
-  const box = sc.getBoundingClientRect()
-  const off = r.height > box.height * 0.6 ? 12 : box.height / 3
-  sc.scrollTo({ top: r.top - box.top + sc.scrollTop - off, behavior: reducedMotion() ? 'auto' : 'smooth' })
+  const v = viewOf(sc)
+  const h = v.bottom - v.top
+  scrollElTo(sc, el, el.getBoundingClientRect().height > h * 0.6 ? 12 : h / 3, false)
   const amber = getComputedStyle(document.documentElement).getPropertyValue('--c-amber-200').trim()
   const on = { backgroundColor: `rgb(${amber} / 0.7)`, boxShadow: `0 0 0 5px rgb(${amber} / 0.7)`, borderRadius: '3px' }
   const off0 = { backgroundColor: `rgb(${amber} / 0)`, boxShadow: `0 0 0 5px rgb(${amber} / 0)`, borderRadius: '3px' }
@@ -62,14 +76,14 @@ export function useScrollSpy(scrollRef: RefObject<HTMLElement>, heads: BlockOf<'
     raf.current = requestAnimationFrame(() => {
       const sc = scrollRef.current
       if (!sc) return
-      const top = sc.getBoundingClientRect().top
+      const top = viewOf(sc).top
       let heading: string | null = null
       for (const h of heads) {
         const el = sc.querySelector(`#${CSS.escape(h.anchor)}`)
         if (el && el.getBoundingClientRect().top - top <= SPY_TOP) heading = h.anchor
       }
       const t = sc.querySelector<HTMLElement>('[data-title]')
-      const title = !!t && sc.scrollTop > t.offsetTop + t.offsetHeight - 8
+      const title = !!t && t.getBoundingClientRect().bottom - 8 < top
       setSpy((s) => (s.heading === heading && s.title === title ? s : { heading, title }))
     })
   }
@@ -88,12 +102,12 @@ export function useScrollMemory(scrollRef: RefObject<HTMLElement>, docId: string
   useLayoutEffect(() => {
     if (!ready || restored.current) return
     restored.current = true
-    const y = recall(docId)
-    if (y && scrollRef.current) scrollRef.current.scrollTop = y
+    // 0이어도 넣는다 — 폰은 문서 스크롤 하나를 글마다 같이 써서 지난 글의 자리가 남아 있다
+    if (scrollRef.current) scrollerOf(scrollRef.current).scrollTop = recall(docId)
   }, [ready, docId, scrollRef])
   return () => {
     // 돌아가기 전(본문이 오기 전)의 스크롤은 적지 않는다 — 빈 칸의 0이 기억을 덮어쓰지 않게
-    if (present && restored.current && scrollRef.current) remember(docId, scrollRef.current.scrollTop)
+    if (present && restored.current && scrollRef.current) remember(docId, scrollerOf(scrollRef.current).scrollTop)
   }
 }
 

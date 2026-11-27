@@ -2,7 +2,7 @@ import { cx } from '@dumpster/blocks'
 import type { GraphIndex } from '@dumpster/schema'
 import { m } from 'framer-motion'
 import { Menu } from 'lucide-react'
-import { forwardRef } from 'react'
+import { forwardRef, useLayoutEffect } from 'react'
 import { paneVariants, QUICK } from './ui/motion'
 import { frame } from './pane/styles'
 import { IconButton } from './ui/IconButton'
@@ -16,27 +16,21 @@ export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: 
   ref,
 ) {
   const recent = [...ix.graph.docs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt) || a.title.localeCompare(b.title, 'ko')).slice(0, 8)
+  // 폰은 문서가 스크롤된다(pane/styles frame) — 지난 글의 스크롤 자리가 남아 있으니 맨 위로. 움직임도 없음
+  useLayoutEffect(() => {
+    if (phone) scrollTo(0, 0)
+  }, [phone])
+  const motion = phone ? {} : { custom: 0, variants: paneVariants, initial: 'enter', animate: 'center', exit: 'exit', transition: QUICK }
   return (
-    <m.section
-      ref={ref}
-      custom={0}
-      variants={paneVariants}
-      initial="enter"
-      animate="center"
-      exit="exit"
-      transition={QUICK}
-      style={{ zIndex: z }}
-      className={cx(frame.card, frame.grow, !phone && frame.edge)}
-      data-slot="home"
-    >
+    <m.section ref={ref} {...motion} style={{ zIndex: z }} className={cx(frame.card, phone ? frame.phone : frame.clip, frame.grow, !phone && frame.edge)} data-slot="home">
       {onMenu && (
-        <div className={cx(frame.header, 'border-transparent')}>
+        <div className={cx(frame.header, 'border-transparent', phone && frame.sticky)}>
           <IconButton label="목록 열기" onClick={onMenu} data-menu>
             <Menu size={18} />
           </IconButton>
         </div>
       )}
-      <div className={frame.scroll}>
+      <div className={phone ? frame.scrollPage : frame.scroll}>
         <article className={frame.page}>
           <h1 className="mt-8 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 @[560px]:text-[28px]">{SITE.title}</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-slate-500">짬통에 던져 둔 글을 컬렉션별로 이어 읽는 곳.</p>

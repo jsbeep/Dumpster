@@ -1,6 +1,6 @@
 import { cx, type BlockOf } from '@dumpster/blocks'
 import { m } from 'framer-motion'
-import { forwardRef, useCallback, useRef } from 'react'
+import { forwardRef, useCallback, useEffect, useRef, useState } from 'react'
 import type { Store } from '../core/data'
 import type { Action, Slot, View } from '../core/view'
 import type { Land, Landing, Pulse } from '../hooks/useView'
@@ -11,7 +11,7 @@ import { Article, Gone } from './Article'
 import { FindBar, useFind } from './Find'
 import { PaneHeader } from './PaneHeader'
 import { frame } from './styles'
-import { Toc } from './Toc'
+import { headText, Toc, TocSheet } from './Toc'
 import { useDoc } from './useDoc'
 import { scrollToAnchor, useLanding, useScrollMemory, useScrollSpy } from './useScroll'
 import { useWidthFollow } from './useWidthFollow'
@@ -56,24 +56,36 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
     spyScroll()
     keep()
   }
+  // 폰은 문서가 스크롤된다 (useScroll scrollerOf) — 칸 안 div 대신 window에서 듣는다
+  const onScrollRef = useRef(onScroll)
+  onScrollRef.current = onScroll
+  useEffect(() => {
+    if (!p.phone) return
+    const h = () => onScrollRef.current()
+    addEventListener('scroll', h, { passive: true })
+    return () => removeEventListener('scroll', h)
+  }, [p.phone])
+  // 폰 목차(B4): 칸 머리 가운데 = 지금 읽는 헤딩(없으면 제목이 지나간 뒤 제목, 그 전엔 '목차') → 누르면 머리 밑으로 목록
+  const [tocOpen, setTocOpen] = useState(false)
+  const closeToc = useCallback(() => setTocOpen(false), [])
+  const curHead = heads.find((h) => h.anchor === spy.heading)
+  const phoneToc =
+    p.phone && heads.length >= 2 ? { label: curHead ? headText(curHead) : spy.title ? title : null, open: tocOpen, onToggle: () => setTocOpen((o) => !o) } : undefined
   const jump = useCallback((anchor: string) => scrollToAnchor(scrollRef.current, anchor), []) // Article(memo)에 넘긴다
   const find = useFind(p.focused, !!doc)
   const { setCard, innerRef, articleRef, unfreeze } = useWidthFollow(ref)
   useLanding(scrollRef, articleRef, p.pending, slot, p.docId, doc, find.open)
+  // 폰은 칸 움직임 없음 (B3 — 사용자: 폰은 단순하게). 칸이 하나라 들고 나는 칸도 없다
+  const motion = p.phone
+    ? {}
+    : { custom: p.dir, variants: paneVariants, initial: 'enter', animate: 'center', exit: 'exit', transition: QUICK, layout: true, onLayoutAnimationComplete: unfreeze }
 
   return (
     <m.section
       ref={setCard}
-      onLayoutAnimationComplete={unfreeze}
-      custom={p.dir}
-      variants={paneVariants}
-      initial="enter"
-      animate="center"
-      exit="exit"
-      transition={QUICK}
-      layout
+      {...motion}
       style={{ zIndex: p.z }}
-      className={cx(frame.card, p.half ? frame.half : frame.grow, !p.phone && frame.edge)}
+      className={cx(frame.card, p.phone ? frame.phone : frame.clip, p.half ? frame.half : frame.grow, !p.phone && frame.edge)}
       data-slot={slot}
       data-focus={(p.focused && hasRel) || undefined}
       aria-label={`${slot === 'main' ? '이어읽기' : '건너읽기'}: ${title}`}
@@ -84,7 +96,9 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
             framer가 반대로 보정해서 글자가 늘어나 보이지 않는다. 안쪽은 바로 새 폭으로 그려지고 카드가 잘라 보여 준다 */}
         {/* 안쪽 감싸개도 칸과 같은 움직임 값 — 따로 두면 framer 기본(0.45초)으로 돌아, 칸 왼쪽 끝이 옮겨 갈 때(연관 칸)
             칸이 멈춘 뒤에도 본문이 미끄러졌다 */}
-        <m.div ref={innerRef} layout="position" transition={QUICK} className="flex min-h-0 flex-1 flex-col">
+        <m.div ref={innerRef} layout={p.phone ? false : 'position'} transition={QUICK} className="flex min-h-0 flex-1 flex-col">
+          {/* 칸 머리 묶음 — 폰은 화면 위에 붙는다(sticky). PC는 contents라 감싸지 않은 것과 같다 */}
+          <div className={p.phone ? frame.sticky : 'contents'} data-sticky>
           <PaneHeader
             ix={ix}
             view={view}
@@ -97,19 +111,22 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
             focused={p.focused}
             onMenu={p.onMenu}
             onFind={find.open}
+            toc={phoneToc}
             onReveal={p.onReveal}
             dispatch={dispatch}
           />
           {find.seed.n > 0 && doc && <FindBar slot={slot} rootRef={articleRef} scrollRef={scrollRef} ready={doc} seed={find.seed} onClose={find.close} />}
+          {phoneToc && tocOpen && <TocSheet heads={heads} current={spy.heading} onGo={jump} onClose={closeToc} />}
+          </div>
           <div className="relative flex min-h-0 flex-1">
-            <div className={frame.scroll} ref={scrollRef} onScroll={onScroll} data-scroll>
+            <div className={p.phone ? frame.scrollPage : frame.scroll} ref={scrollRef} onScroll={p.phone ? undefined : onScroll} data-scroll={p.phone ? 'page' : ''}>
               {doc ? (
                 <Article ix={ix} doc={doc} slot={slot} view={view} crumbs={p.crumbs} articleRef={articleRef} dispatch={dispatch} onJump={jump} onReveal={p.onReveal} onZoom={p.onZoom} />
               ) : doc === null || !meta ? (
                 <Gone />
               ) : null}
             </div>
-            {heads.length >= 2 && <Toc heads={heads} current={spy.heading} onGo={jump} />}
+            {!p.phone && heads.length >= 2 && <Toc heads={heads} current={spy.heading} onGo={jump} />}
           </div>
         </m.div>
         {p.flash?.slot === slot && (

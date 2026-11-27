@@ -36,6 +36,18 @@ body {
   background: var(--page-bg);
   overflow: hidden;
 }
+/* 폰(≤720px — useMedia·max-[720px]: 와 같은 기준, B3 11-27): 칸 안 스크롤 대신 문서가 스크롤된다.
+   주소창이 접히고, 상태바를 누르면 맨 위로 (칸 모양은 pane/styles frame, 스크롤 값은 pane/useScroll scrollerOf) */
+@media (max-width: 720px) {
+  html,
+  body,
+  #root {
+    height: auto;
+  }
+  body {
+    overflow: visible;
+  }
+}
 * {
   scrollbar-width: thin;
   scrollbar-color: var(--scrollbar) transparent;

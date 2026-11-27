@@ -37,7 +37,7 @@ const styles = {
   segIdle: 'text-slate-500 hover:text-slate-900',
   segOn: 'bg-page text-slate-900 shadow-sm',
   divider: 'mx-3 my-2.5 h-px shrink-0 bg-line',
-  body: 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden px-2 pb-3',
+  body: 'min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain px-2 pb-3', // 끝까지 굴려도 뒤(폰은 문서)가 안 따라 굴러감
   // 컬렉션 줄 (mongolive ConnectionsTree 행)
   collRow: 'group flex h-8 w-full shrink-0 items-center gap-1.5 rounded-md pr-1 text-left text-[13px] transition-colors hover:bg-side-hover',
   collBtn: 'flex min-w-0 flex-1 items-center gap-1.5 self-stretch pl-0.5 text-left',
