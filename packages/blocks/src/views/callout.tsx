@@ -71,6 +71,8 @@ export function calloutKind(kind: string): { color: Color; Icon: LucideIcon } {
 // - summary: 열린 접는 콜아웃의 제목줄은 칸 위에 붙는다(sticky, 11-27) — 긴 콜아웃 중간에서도 눌러서 접는다.
 //   붙는 높이는 --stick-top(탐색기 폰 = 칸 머리 높이, 없으면 0). 붙은 동안 뒤 글이 비치지 않게 바탕 = 콜아웃 색(--callout-tint) + 페이지 바탕.
 //   상자 위·아래 여백만큼 음수 여백으로 넓혀 붙었을 때도 상자 폭·여백 그대로. 안쪽 콜아웃 제목줄은 안 붙는다(바깥과 겹침)
+//   제목줄은 각진 채로 두고 상자(details)를 overflow: clip으로 둥근 모서리대로 자른다 — 제목줄을 둥글리면 붙었을 때 모서리 틈으로 뒤 글이 비쳤다.
+//   clip은 hidden과 달리 스크롤 상자를 안 만들어 sticky가 산다
 // 붙은 제목줄을 눌러 접으면 제목이 제자리(위쪽 멀리)로 돌아가 화면에서 사라진다 → 누르기 직전 자리로 다시 데려온다 (scroll-mt = 붙는 높이)
 export function CalloutView({ block }: { block: BlockOf<'callout'> }) {
   const pressedTop = useRef<number | null>(null)

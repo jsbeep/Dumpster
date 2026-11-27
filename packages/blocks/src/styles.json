@@ -83,8 +83,8 @@
       }
     },
     "head": "flex items-start gap-2 font-semibold [&_strong]:text-inherit",
-    "details": "[interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:[transition:height_0.25s_ease,content-visibility_0.25s_allow-discrete] [&[open]::details-content]:h-auto",
-    "summary": "cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden -mt-3 -mb-2 rounded-t-lg pb-2 pt-3 scroll-mt-[var(--stick-top,0px)] [[open]>&]:sticky [[open]>&]:top-[var(--stick-top,0px)] [[open]>&]:z-[5] [[open]>&]:[background:linear-gradient(var(--callout-tint),var(--callout-tint)),var(--page-bg)] [[open]_[open]>&]:static [[open]_[open]>&]:[background:none]",
+    "details": "[interpolate-size:allow-keywords] [&::details-content]:h-0 [&::details-content]:overflow-hidden [&::details-content]:[transition:height_0.25s_ease,content-visibility_0.25s_allow-discrete] [&[open]::details-content]:h-auto overflow-clip",
+    "summary": "cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden -mt-3 -mb-2 pb-2 pt-3 scroll-mt-[var(--stick-top,0px)] [[open]>&]:sticky [[open]>&]:top-[var(--stick-top,0px)] [[open]>&]:z-[5] [[open]>&]:[background:linear-gradient(var(--callout-tint),var(--callout-tint)),var(--page-bg)] [[open]_[open]>&]:static [[open]_[open]>&]:[background:none]",
     "icon": "mt-[0.325em] h-[1.05em] w-[1.05em] shrink-0",
     "title": "min-w-0",
     "chevron": "mt-[0.35em] h-[1em] w-[1em] shrink-0 opacity-70 transition-transform duration-200 [details[open]>summary>&]:rotate-90",
