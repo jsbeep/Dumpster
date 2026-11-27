@@ -159,7 +159,7 @@ export function FindBar({ slot, rootRef, scrollRef, ready, seed, onClose }: Prop
   const move = (d: number) => n && setCur((c) => (c + d + n) % n)
 
   return (
-    <div className="flex h-10 shrink-0 items-center gap-0.5 border-b border-line pl-3 pr-2" data-find={slot}>
+    <div className="flex h-10 max-[720px]:h-12 shrink-0 items-center gap-0.5 border-b border-line pl-3 pr-2" data-find={slot}>
       <Search size={14} className="shrink-0 text-slate-400" aria-hidden />
       <input
         ref={inputRef}
@@ -177,7 +177,7 @@ export function FindBar({ slot, rootRef, scrollRef, ready, seed, onClose }: Prop
         }}
         placeholder="이 글에서 찾기"
         aria-label="이 글에서 찾기"
-        className="h-8 min-w-0 flex-1 bg-transparent px-2 text-[13px] text-slate-900 outline-none placeholder:text-slate-400"
+        className="h-8 min-w-0 flex-1 bg-transparent px-2 text-[13px] max-[720px]:text-base text-slate-900 outline-none placeholder:text-slate-400"
         data-find-input
       />
       <span className="shrink-0 px-1.5 text-[12px] tabular-nums text-slate-400" aria-live="polite" data-find-count>

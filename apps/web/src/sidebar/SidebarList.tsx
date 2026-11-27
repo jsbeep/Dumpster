@@ -29,10 +29,11 @@ const styles = {
   brandName: 'group/title min-w-0 flex-1 rounded-md text-left outline-none',
   brandTitle: 'truncate text-sm font-semibold tracking-tight text-slate-900 transition-colors group-hover/title:text-slate-500',
   brandSub: 'truncate text-[11px] text-slate-500',
-  search: 'h-8 w-full rounded-md border border-line bg-page pl-8 pr-8 text-[13px] text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400',
+  // 폰: 16px 밑이면 iOS 사파리가 입력칸을 누를 때 화면을 확대해 버린다
+  search: 'h-8 max-[720px]:h-10 w-full rounded-md border border-line bg-page pl-8 pr-8 text-[13px] max-[720px]:text-base text-slate-800 outline-none transition-colors placeholder:text-slate-400 focus:border-slate-400',
   searchIcon: 'pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400',
   seg: 'mx-3 mt-2 flex shrink-0 gap-0.5 rounded-md bg-side-hover p-[3px]',
-  segBtn: 'flex h-7 flex-1 items-center justify-center rounded-[5px] text-[12.5px] font-medium transition-colors',
+  segBtn: 'flex h-7 max-[720px]:h-9 flex-1 items-center justify-center rounded-[5px] text-[12.5px] font-medium transition-colors',
   segIdle: 'text-slate-500 hover:text-slate-900',
   segOn: 'bg-page text-slate-900 shadow-sm',
   divider: 'mx-3 my-2.5 h-px shrink-0 bg-line',

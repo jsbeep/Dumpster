@@ -20,8 +20,11 @@ function stored(): Theme | null {
 
 export const isDark = () => (forced ?? stored() ?? (media.matches ? 'dark' : 'light')) === 'dark'
 
+// 폰 브라우저 위 띠(theme-color)도 칸 바탕색으로 — 시스템 설정이 아니라 고른 테마를 따라가게 여기서 칠한다
 export function paintTheme() {
   document.documentElement.classList.toggle('dark', isDark())
+  const bg = getComputedStyle(document.body).backgroundColor
+  document.querySelector('meta[name="theme-color"]')?.setAttribute('content', bg)
 }
 
 export function toggleTheme(): boolean {

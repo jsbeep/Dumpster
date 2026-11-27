@@ -1,6 +1,6 @@
 import { cx, type BlockOf } from '@dumpster/blocks'
 import { m } from 'framer-motion'
-import { forwardRef, useRef } from 'react'
+import { forwardRef, useCallback, useRef } from 'react'
 import type { Store } from '../core/data'
 import type { Action, Slot, View } from '../core/view'
 import type { Land, Landing, Pulse } from '../hooks/useView'
@@ -56,7 +56,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
     spyScroll()
     keep()
   }
-  const jump = (anchor: string) => scrollToAnchor(scrollRef.current, anchor)
+  const jump = useCallback((anchor: string) => scrollToAnchor(scrollRef.current, anchor), []) // Article(memo)에 넘긴다
   const find = useFind(p.focused, !!doc)
   const { setCard, innerRef, articleRef, unfreeze } = useWidthFollow(ref)
   useLanding(scrollRef, articleRef, p.pending, slot, p.docId, doc, find.open)

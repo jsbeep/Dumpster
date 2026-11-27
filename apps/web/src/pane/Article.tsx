@@ -1,7 +1,7 @@
 import { BlockRenderer, cx } from '@dumpster/blocks'
 import type { Doc, GraphIndex } from '@dumpster/schema'
 import { ArrowDownLeft, ArrowUpRight, CornerUpLeft } from 'lucide-react'
-import { useCallback, type RefObject } from 'react'
+import { memo, useCallback, type RefObject } from 'react'
 import { backlinks, outLinks } from '../core/links'
 import type { Action, Slot, View } from '../core/view'
 import type { Land } from '../hooks/useView'
@@ -37,7 +37,10 @@ interface Props {
   onZoom: (z: Zoom) => void
 }
 
-export function Article({ ix, doc, slot, view, crumbs, articleRef, dispatch, onJump, onReveal, onZoom }: Props) {
+// memo — 칸은 읽는 위치(목차 줄·칸 머리 제목)가 바뀔 때마다 다시 그려진다. 헤딩이 칸 위를 지날 때마다 본문 블록을
+// 전부 다시 그리면 폰에서 그 프레임이 길어져 버벅였다(11-27 측정: 헤딩 4개 글 한 번 내리는 동안 5번, 최장 프레임 35ms).
+// 그래서 props는 전부 안 바뀌는 값으로 넘긴다 (Pane의 jump는 useCallback)
+export const Article = memo(function Article({ ix, doc, slot, view, crumbs, articleRef, dispatch, onJump, onReveal, onZoom }: Props) {
   const onOpenDoc = useCallback((id: string, heading?: string) => dispatch({ type: 'link', id }, heading ? { anchor: heading } : undefined), [dispatch])
   const prevId = ix.prevOf.get(doc.id)
   const prev = prevId ? ix.docsById.get(prevId) : undefined
@@ -98,7 +101,7 @@ export function Article({ ix, doc, slot, view, crumbs, articleRef, dispatch, onJ
       </footer>
     </article>
   )
-}
+})
 
 // 지워졌거나 공개를 내린 글 (주소로 바로 들어왔을 때 등)
 export function Gone() {

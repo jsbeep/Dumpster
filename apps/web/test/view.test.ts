@@ -195,6 +195,15 @@ describe('칸 동작 나머지', () => {
     expect(show(r.view)).toEqual({ main: 'OS 설치', tabs: ['라즈베리파이 고르기', '고정 IP 설정'], active: '고정 IP 설정' })
   })
 
+  it('폰 서랍에서 고르기(solo) — 칸이 하나라 탭을 비우고 그 글만, 지금 흐름 글이어도 탭이 있으면 비움', () => {
+    const r = reduce(abc, { type: 'open', id: id('외장 SSD 달기'), solo: true })
+    expect([show(r.view), r.history, r.slot]).toEqual([{ main: '외장 SSD 달기', tabs: [], active: null }, 'push', 'main'])
+    const same = reduce(abc, { type: 'open', id: id('도커 설치'), solo: true })
+    expect([show(same.view), same.history]).toEqual([{ main: '도커 설치', tabs: [], active: null }, 'push'])
+    const alone = view('도커 설치')
+    expect(reduce(alone, { type: 'open', id: id('도커 설치'), solo: true }).history).toBe('none')
+  })
+
   it('폰 ‹ — 지금 탭을 닫고 왼쪽 탭으로, 맨 앞이면 흐름 글로', () => {
     expect(show(reduce(abc, { type: 'back' }).view).active).toBe('라즈베리파이 고르기')
     const first = { ...abc, active: 0 }

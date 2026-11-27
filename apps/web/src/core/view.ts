@@ -19,7 +19,8 @@ export interface View {
 export const HOME: View = { main: null, tabs: [], active: 0, collapsed: null }
 
 export type Action =
-  | { type: 'open'; id: string; scan?: boolean } // 트리·최근·태그 → 흐름 칸 교체. scan = j/k로 훑기(기록을 덮어씀)
+  | { type: 'open'; id: string; scan?: boolean; solo?: boolean } // 트리·최근·태그 → 흐름 칸 교체. scan = j/k로 훑기(기록을 덮어씀)
+  //   solo = 폰: 칸이 하나라 탭이 있으면 고른 글이 안 보인다 → 탭을 비우고 그 글만 (뒤로가기로 탭이 돌아옴)
   | { type: 'step'; slot: Slot; id: string } // 이전/다음 — 지금 칸 안에서
   | { type: 'link'; id: string } // 본문 링크·임베드·글 끝 목록 — 어느 칸에서든 연관 칸 새 탭
   | { type: 'pick'; index: number } // 띠 누르기
@@ -53,11 +54,13 @@ export function freshDocs(before: View, after: View): string[] {
 export function reduce(view: View, action: Action): Result {
   switch (action.type) {
     case 'open': {
+      const solo = (v: View): View => (action.solo && v.tabs.length ? { ...v, tabs: [], active: 0, collapsed: null } : v)
       if (view.main === action.id) {
+        if (action.solo && view.tabs.length) return done(view, solo(view), 'main')
         if (view.collapsed === 'main') return done(view, { ...view, collapsed: null }, 'main')
         return still(view, 'main')
       }
-      return done(view, setMain(view, action.id), 'main', action.scan)
+      return done(view, solo(setMain(view, action.id)), 'main', action.scan)
     }
 
     case 'step': {

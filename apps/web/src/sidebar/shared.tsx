@@ -15,7 +15,7 @@ export const TABS: { tab: SideTab; icon: LucideIcon; label: string }[] = [
 
 // 글 한 줄 (찾은 글·최근·태그) — 제목 + 흐린 한 줄
 export const item = {
-  row: 'flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 transition-colors',
+  row: 'flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 max-[720px]:py-2.5 transition-colors',
   idle: 'hover:bg-side-hover',
   on: 'bg-selected',
   title: 'truncate text-[13px] font-medium text-slate-700',

@@ -57,6 +57,7 @@ export function TooltipLayer() {
       node instanceof Element ? (node.closest('[data-tt], [data-legend]') as HTMLElement | null) : null
 
     const handleOver = (event: PointerEvent) => {
+      if (event.pointerType !== 'mouse') return // 손가락·펜으로 누를 땐 툴팁 없음 — 폰에서 눌린 뒤 남아 있지 않게
       const anchor = findAnchor(event.target)
       const text = anchor?.dataset.tt ?? ''
       const legend = anchor?.dataset.legend

@@ -5,7 +5,7 @@ export const frame = {
   edge: 'border-l border-line', // 왼쪽 이웃(사이드바·칸·띠)과 나누는 선. 폰은 한 칸이라 없음
   grow: 'flex-1 basis-0',
   half: 'w-1/2 flex-none',
-  header: 'flex h-11 shrink-0 items-center gap-0.5 border-b px-2 transition-colors',
+  header: 'flex h-11 max-[720px]:h-12 shrink-0 items-center gap-0.5 border-b px-2 transition-colors',
   scroll: 'relative min-h-0 flex-1 overflow-y-auto overflow-x-hidden overscroll-contain',
   page: 'mx-auto max-w-[760px] pb-16 pl-[22px] pr-10 @[560px]:px-11 @[560px]:pb-[72px]',
 } as const

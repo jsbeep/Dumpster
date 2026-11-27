@@ -18,7 +18,7 @@ import { activeOf, type View } from '../core/view'
 // 점의 속(속 빈 점)과 고리 틈은 --dot-bg = 그 행의 바탕색 (행 바탕이 바뀌면 같이 바뀐다 — 불투명 색만)
 
 const styles = {
-  row: 'group relative flex h-7 items-center gap-0.5 rounded-md pr-1 text-[13px] transition-colors',
+  row: 'group relative flex h-7 max-[720px]:h-9 items-center gap-0.5 rounded-md pr-1 text-[13px] transition-colors',
   rowIdle: '[--dot-bg:var(--side)] hover:bg-side-hover hover:[--dot-bg:var(--side-hover)]',
   rowSel: 'bg-selected [--dot-bg:rgb(var(--c-selected))]',
   rowHl: 'ring-[1.5px] ring-inset ring-accent-400',

@@ -3,6 +3,7 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 
 // 아이콘만 있는 네모 버튼 — 툴팁(data-tt, TooltipLayer)과 화면 읽기(aria-label)를 label 하나로
 //   size  : xs 검색칸 안 지우기 · sm 사이드바 줄 안 · md 칸 머리·찾기 줄 · lg 사이드바 머리 · xl 레일
+//           폰(≤720px)에선 md·lg가 40px 네모 + 아이콘 19px (손가락 — 28px은 너무 작았다, 11-27)
 //   tone  : 놓인 바탕 — page 칸 위(반투명 호버) · side 사이드바 머리·레일 · row 사이드바 줄 안(줄 호버 바탕보다 한 단계 진하게)
 //   on    : 고른 상태(레일의 지금 목록 탭) — 바탕·글자색을 tone 대신 이것 하나로
 //   reveal: 줄에 마우스를 올려야(또는 줄 안에 포커스) 보임 — display를 inline-flex 대신 hidden + group-hover
@@ -12,8 +13,8 @@ import type { ButtonHTMLAttributes, ReactNode } from 'react'
 const SIZE = {
   xs: 'h-5 w-5 rounded',
   sm: 'h-6 w-6 rounded-md',
-  md: 'h-7 w-7 rounded-md',
-  lg: 'h-8 w-8 rounded-md',
+  md: 'h-7 w-7 rounded-md max-[720px]:h-10 max-[720px]:w-10 max-[720px]:[&>svg]:size-[19px]',
+  lg: 'h-8 w-8 rounded-md max-[720px]:h-10 max-[720px]:w-10 max-[720px]:[&>svg]:size-[19px]',
   xl: 'h-9 w-9 rounded-md',
 } as const
 const TONE = {

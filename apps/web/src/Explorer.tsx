@@ -14,6 +14,7 @@ import { useSidebar } from './sidebar/useSidebar'
 import type { RevealRequest } from './sidebar/useSidebarList'
 import { FlowSpine, Stack } from './Strips'
 import { QUICK } from './ui/motion'
+import { SITE } from './ui/site'
 
 // 탐색기 화면 = 사이드바 + 흐름 칸 + [왼쪽 띠] 연관 칸 [오른쪽 띠] (design.md §3 "칸")
 // 11-27 평평한 판: 바탕 그라데이션·카드·틈 없이 사이드바 | 칸 | 띠 | 칸을 1px 선으로 붙인다 (선 = 각 칸·띠의 왼쪽 테두리)
@@ -38,6 +39,12 @@ export function Explorer({ store }: { store: Store }) {
   const [zoom, setZoom] = useState<Zoom | null>(null)
 
   const focusDoc = slot === 'rel' && hasRel ? activeOf(view) : view.main
+
+  // 브라우저 탭 제목 = 지금 보는 글 — 방문 기록·북마크·공유에 글 제목이 남는다
+  useEffect(() => {
+    const t = focusDoc ? ix.docsById.get(focusDoc)?.title : undefined
+    document.title = t ? `${t} — ${SITE.title}` : SITE.title
+  }, [focusDoc, ix])
   const coll = phone ? null : view.collapsed
   const active = activeOf(view)
   // 띠에 들어갈 탭이 있는 쪽만 (왼쪽 = 펼친 탭 앞쪽 + 연관 칸을 접었으면 펼친 탭, 오른쪽 = 뒤쪽)
@@ -118,7 +125,7 @@ export function Explorer({ store }: { store: Store }) {
           hl={[hover, rowFlash]}
           reveal={reveal}
           onOpen={(id, land) => {
-            dispatch({ type: 'open', id }, land)
+            dispatch({ type: 'open', id, solo: phone }, land)
             setDrawer(false)
           }}
           onScan={(id) => dispatch({ type: 'open', id, scan: true })}

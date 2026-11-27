@@ -12,9 +12,9 @@ const styles = {
   lane: 'shrink-0 whitespace-nowrap px-1.5 text-[11.5px] font-semibold',
   laneIdle: 'text-slate-400',
   laneFocus: 'text-slate-900',
-  textBtn: 'h-7 shrink-0 whitespace-nowrap rounded-md px-2 text-[12px] text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
+  textBtn: 'h-7 max-[720px]:h-10 shrink-0 whitespace-nowrap rounded-md px-2 text-[12px] text-slate-500 transition-colors hover:bg-hover hover:text-slate-900',
   headTitle: 'min-w-0 flex-1 truncate px-1.5 text-[13px] font-semibold text-slate-700',
-  back: 'flex h-7 max-w-[46%] shrink-0 items-center gap-1 rounded-md pl-1 pr-2 text-[12.5px] text-slate-500 hover:bg-hover hover:text-slate-900',
+  back: 'flex h-10 max-w-[46%] shrink-0 items-center gap-1 rounded-md pl-1 pr-2 text-[13.5px] text-slate-500 hover:bg-hover hover:text-slate-900',
 } as const
 
 interface Props {

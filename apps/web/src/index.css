@@ -29,6 +29,9 @@ body,
 #root {
   height: 100%;
 }
+html {
+  -webkit-tap-highlight-color: transparent; /* 폰 브라우저가 누른 링크·버튼에 덮는 회색·파란 상자 — 평평한 판과 안 맞는다 */
+}
 body {
   background: var(--page-bg);
   overflow: hidden;
