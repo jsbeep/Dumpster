@@ -22,15 +22,15 @@ export const Home = forwardRef<HTMLElement, { ix: GraphIndex; z: number; phone: 
   }, [phone])
   const motion = phone ? {} : { custom: 0, variants: paneVariants, initial: 'enter', animate: 'center', exit: 'exit', transition: QUICK }
   return (
-    <m.section ref={ref} {...motion} style={{ zIndex: z }} className={cx(frame.card, phone ? frame.phone : frame.clip, frame.grow, !phone && frame.edge)} data-slot="home">
+    <m.section ref={ref} {...motion} style={{ zIndex: z }} className={cx(frame.card, phone ? frame.phone : cx(frame.clip, frame.cq), frame.grow, !phone && frame.edge)} data-slot="home">
       {onMenu && (
-        <div className={cx(frame.header, 'border-transparent', phone && frame.sticky)}>
+        <div className={cx(frame.header, 'border-transparent', phone && cx(frame.sticky, frame.push, frame.slide))} data-sticky>
           <IconButton label="목록 열기" onClick={onMenu} data-menu>
             <Menu size={18} />
           </IconButton>
         </div>
       )}
-      <div className={phone ? frame.scrollPage : frame.scroll}>
+      <div className={phone ? cx(frame.scrollPage, frame.cq, frame.push, frame.slide) : frame.scroll} style={phone ? { paddingTop: frame.head } : undefined}>
         <article className={cx(frame.page, frame.padEven)}>
           <h1 className="mt-8 text-[24px] font-bold leading-[1.3] tracking-[-0.02em] text-slate-900 @[560px]:text-[28px]">{SITE.title}</h1>
           <p className="mt-2 text-[15px] leading-relaxed text-slate-500">짬통에 던져 둔 글을 컬렉션별로 이어 읽는 곳.</p>

@@ -1,5 +1,6 @@
+import { cx } from '@dumpster/blocks'
 import { AnimatePresence, LayoutGroup } from 'framer-motion'
-import { useCallback, useEffect, useState, type MouseEvent, type PointerEvent } from 'react'
+import { useCallback, useEffect, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react'
 import type { Store } from './core/data'
 import { parseHash } from './core/route'
 import { slideOf } from './core/slide'
@@ -10,6 +11,7 @@ import { useKeyDown } from './hooks/useKeys'
 import { useView, type Land } from './hooks/useView'
 import { Lightbox, type Zoom } from './Lightbox'
 import { Pane } from './pane/Pane'
+import { frame } from './pane/styles'
 import { Sidebar } from './sidebar/Sidebar'
 import { useSidebar } from './sidebar/useSidebar'
 import type { RevealRequest, TagRequest } from './sidebar/useSidebarList'
@@ -24,10 +26,9 @@ import { slide } from './ui/viewTransition'
 
 let revealN = 0
 
-// 폰 서랍 미끄러짐 — CSS transition (11-27). framer의 x는 JS가 프레임마다 transform을 쓰는데(메인 스레드),
+// 폰 서랍 미끄러짐 — CSS transition (pane/styles frame.slide, 11-27). framer의 x는 JS가 프레임마다 transform을 쓰는데(메인 스레드),
 // iOS 저전력 모드는 JS 애니메이션을 30fps로 묶어 버벅였다. CSS transition + cubic-bezier는 브라우저가 GPU 쪽에서 돌린다 (Chirpy와 같은 방식).
-// 곡선은 ui/motion QUICK과 같고 길이만 조금 길게(0.28초, 11-27 사용자). linear()·스프링은 iOS에서 GPU로 못 넘겨 다시 30fps가 된다
-const DRAWER_SLIDE = 'transition-transform duration-[280ms] ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none'
+// linear()·스프링은 iOS에서 GPU로 못 넘겨 다시 30fps가 된다
 
 export function Explorer({ store }: { store: Store }) {
   const ix = store.index
@@ -154,16 +155,21 @@ export function Explorer({ store }: { store: Store }) {
   )
   const home = <Home key="home" ix={ix} z={Z.main} phone={phone} onMenu={onMenu} onOpen={(id) => dispatch({ type: 'open', id })} />
 
-  // 폰 (B3 11-27): 칸 하나 + 문서 스크롤, 칸 움직임 없음 (사용자: 폰은 단순하게). 칸 머리는 화면 위에 붙는다(sticky, pane/styles frame).
-  //   서랍 = 화면에 고정된 사이드바가 왼쪽에서 들어오고, 같은 움직임(CSS transition, DRAWER_SLIDE)으로 칸 묶음이 서랍 폭만큼 오른쪽으로 밀린다
-  //   (사용자: 이 움직임은 좋았다 — 남김). 밀린 칸 위엔 투명한 막, 누르면 닫힘. 밀려서 화면 밖으로 나간 부분은 overflow-x-clip으로 잘라
-  //   가로 스크롤이 안 생기게(clip은 스크롤 상자를 안 만들어 칸 머리 sticky가 산다). 닫혀 있어도 그려 둔다 — 찾기어·트리 스크롤이 남게.
+  // 폰 (B3 11-27): 칸 하나 + 문서 스크롤, 칸 움직임 없음 (사용자: 폰은 단순하게). 칸 머리는 화면에 고정(fixed, pane/styles frame) —
+  //   맨 위·아래에서 문서가 튕겨도(iOS 바운스·당겨서 새로고침) 머리는 제자리.
+  //   서랍 = 화면에 고정된 사이드바가 왼쪽에서 들어오고, 같은 움직임(frame.slide)으로 칸 머리·본문이 서랍 폭만큼 오른쪽으로 밀린다
+  //   (사용자: 이 움직임은 좋았다 — 남김). 칸 묶음 통째로 밀면 그 transform이 고정된 머리를 붙잡아 화면에서 떨어진다 →
+  //   바깥은 --push 값만 바꾸고 머리·본문이 각자 민다(frame.push). 밀린 칸 위엔 투명한 막, 누르면 닫힘. 밀려서 화면 밖으로 나간 부분은
+  //   overflow-x-clip으로 잘라 가로 스크롤이 안 생기게. 서랍은 닫혀 있어도 그려 둔다 — 찾기어·트리 스크롤이 남게.
   //   탭이 있으면 펼친 탭, 없으면 흐름 글 (design.md §3 폰)
   if (phone) {
     const shown = hasRel && active ? ['rel', active] as const : view.main ? ['main', view.main] as const : null
     return (
-      <div className="relative min-h-dvh overflow-x-clip bg-page font-sans text-slate-900 antialiased">
-        <div className={`relative ${DRAWER_SLIDE}`} style={{ transform: drawer ? `translateX(${drawerW}px)` : 'none' }}>
+      <div
+        className="relative min-h-dvh overflow-x-clip bg-page font-sans text-slate-900 antialiased"
+        style={{ '--push': drawer ? `${drawerW}px` : '0px' } as CSSProperties}
+      >
+        <div className="relative">
           <main className="relative min-w-0" onPointerDown={onPanesDown} data-panes="one">
             {shown ? (
               <Pane key={`${shown[0]}:${shown[1]}`} slot={shown[0]} docId={shown[1]} dir={0} half={false} z={Z.main} focused {...paneProps} />
@@ -172,9 +178,9 @@ export function Explorer({ store }: { store: Store }) {
             )}
           </main>
           {/* 밀린 칸 위 투명한 막 — 누르면 닫힘, 끌어도 뒤 문서가 안 굴러감. 어둡게 하지 않는다(11-27 사용자) */}
-          {drawerOpen && <div className="absolute inset-0 z-[90] touch-none" onClick={() => setDrawer(false)} aria-hidden data-scrim />}
+          {drawerOpen && <div className="fixed inset-0 z-[90] touch-none" onClick={() => setDrawer(false)} aria-hidden data-scrim />}
         </div>
-        <div className={`fixed inset-y-0 left-0 z-[100] ${DRAWER_SLIDE}`} style={{ width: drawerW, transform: `translateX(${drawer ? 0 : -drawerW}px)` }}>
+        <div className={cx('fixed inset-y-0 left-0 z-[100]', frame.slide)} style={{ width: drawerW, transform: `translateX(${drawer ? 0 : -drawerW}px)` }}>
           {sidebarEl}
         </div>
         <Lightbox zoom={zoom} onClose={() => setZoom(null)} />

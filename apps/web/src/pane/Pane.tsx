@@ -79,7 +79,9 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   useLanding(scrollRef, articleRef, p.pending, slot, p.docId, doc, find.open)
   // 폰은 칸 움직임 없음 (B3 — 사용자: 폰은 단순하게). 칸이 하나라 들고 나는 칸도 없다
   // 본문 안에서 위에 붙는 것(열린 접는 콜아웃 제목줄 — blocks callout)이 붙을 높이: 폰은 화면 위 칸 머리(48px) + 찾기 줄(48px) 밑
-  const stickTop = (p.phone ? { '--stick-top': `${48 + (find.seed.n > 0 && doc ? 48 : 0)}px` } : undefined) as CSSProperties | undefined
+  // 폰: 본문을 고정된 칸 머리 묶음 높이만큼 내린다(목차 펼침은 위에 덮어서 뺌). 같은 값이 본문 안에서 위에 붙는 것(열린 접는 콜아웃 제목줄 — blocks callout)의 높이
+  const headH = frame.head + (find.seed.n > 0 && doc ? frame.head : 0)
+  const phoneBody = (p.phone ? { '--stick-top': `${headH}px`, paddingTop: headH } : undefined) as CSSProperties | undefined
   const motion = p.phone
     ? {}
     : { custom: p.dir, variants: paneVariants, initial: 'enter', animate: 'center', exit: 'exit', transition: QUICK, layout: true, onLayoutAnimationComplete: unfreeze }
@@ -89,7 +91,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
       ref={setCard}
       {...motion}
       style={{ zIndex: p.z }}
-      className={cx(frame.card, p.phone ? frame.phone : frame.clip, p.half ? frame.half : frame.grow, !p.phone && frame.edge)}
+      className={cx(frame.card, p.phone ? frame.phone : cx(frame.clip, frame.cq), p.half ? frame.half : frame.grow, !p.phone && frame.edge)}
       data-slot={slot}
       data-focus={(p.focused && hasRel) || undefined}
       aria-label={`${slot === 'main' ? '이어읽기' : '건너읽기'}: ${title}`}
@@ -102,7 +104,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
             칸이 멈춘 뒤에도 본문이 미끄러졌다 */}
         <m.div ref={innerRef} layout={p.phone ? false : 'position'} transition={QUICK} className="flex min-h-0 flex-1 flex-col">
           {/* 칸 머리 묶음 — 폰은 화면 위에 붙는다(sticky). PC는 contents라 감싸지 않은 것과 같다 */}
-          <div className={p.phone ? frame.sticky : 'contents'} data-sticky>
+          <div className={p.phone ? cx(frame.sticky, frame.push, frame.slide) : 'contents'} data-sticky>
           <PaneHeader
             ix={ix}
             view={view}
@@ -122,12 +124,11 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
           {find.seed.n > 0 && doc && <FindBar slot={slot} rootRef={articleRef} scrollRef={scrollRef} ready={doc} seed={find.seed} onClose={find.close} />}
           {phoneToc && tocOpen && <TocSheet heads={heads} current={spy.heading} onGo={jump} onClose={closeToc} />}
           </div>
-          <div className="relative flex min-h-0 flex-1">
+          <div className={cx('relative flex min-h-0 flex-1', p.phone && cx(frame.cq, frame.push, frame.slide))} style={phoneBody}>
             <div
               className={p.phone ? frame.scrollPage : frame.scroll}
               ref={scrollRef}
               onScroll={p.phone ? undefined : onScroll}
-              style={stickTop}
               data-scroll={p.phone ? 'page' : ''}
             >
               {doc ? (
