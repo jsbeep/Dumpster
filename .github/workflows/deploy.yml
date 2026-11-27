@@ -1,0 +1,83 @@
+# 볼트(private) → graph.json → 탐색기 빌드 → 유출 검사 → GitHub Pages (아티팩트 배포, 브랜치 커밋 없음)
+#
+# 실행되는 때
+#   - 볼트 레포에 공개 폴더가 바뀐 push → 볼트 쪽 워크플로가 이 워크플로를 workflow_dispatch로 부름
+#   - 이 레포 main에 push (탐색기 코드가 바뀜)
+#   - Actions 탭에서 손으로 (Run workflow)
+#
+# 필요한 설정 (Settings → Secrets and variables → Actions)
+#   secrets.VAULT_DEPLOY_KEY  볼트 레포 deploy key의 비밀 키 (볼트 쪽엔 읽기 전용으로 등록)
+#   vars.VAULT_REPO           볼트 레포 이름 'owner/name'
+#   vars.DUMPSTER_PUBLIC      공개 컬렉션 폴더, 쉼표 구분 (사이트에 어차피 보이는 이름이라 secret 대신 variable
+#                             — secret이면 로그에서 컬렉션 이름이 전부 *** 로 가려짐)
+#
+# 이 레포는 공개라 Actions 로그도 공개 → 빌더·유출 검사 모두 조용한 모드(개수만). 자세히는 로컬에서.
+
+name: deploy
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+# 볼트 push가 몰려도 마지막 것만 배포
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+permissions: {}
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      DUMPSTER_VAULT: vault
+      DUMPSTER_PUBLIC: ${{ vars.DUMPSTER_PUBLIC }}
+      DUMPSTER_QUIET: '1'
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      # 만든 날·고친 날을 git log에서 뽑으므로 history 전체 (얕게 받으면 날짜가 전부 마지막 커밋)
+      - name: 볼트 받기
+        uses: actions/checkout@v5
+        with:
+          repository: ${{ vars.VAULT_REPO }}
+          ssh-key: ${{ secrets.VAULT_DEPLOY_KEY }}
+          path: vault
+          fetch-depth: 0
+          persist-credentials: false
+
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+
+      - name: graph.json
+        run: pnpm graph
+      - name: 탐색기 빌드
+        run: pnpm build:web
+      - name: 유출 검사 (걸리면 배포 안 함)
+        run: pnpm check:leak
+
+      - uses: actions/upload-pages-artifact@v4
+        with:
+          path: apps/web/dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - id: deploy
+        uses: actions/deploy-pages@v4
