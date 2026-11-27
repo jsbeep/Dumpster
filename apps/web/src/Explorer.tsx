@@ -109,14 +109,16 @@ export function Explorer({ store }: { store: Store }) {
           sidebar={sidebar}
           phone={phone}
           drawerWidth={drawerW}
+          onDrawerOpen={() => setDrawer(true)}
           onDrawerClose={() => setDrawer(false)}
           ix={ix}
+          store={store}
           view={view}
           focusDoc={focusDoc}
           hl={[hover, rowFlash]}
           reveal={reveal}
-          onOpen={(id) => {
-            dispatch({ type: 'open', id })
+          onOpen={(id, anchor) => {
+            dispatch({ type: 'open', id }, anchor)
             setDrawer(false)
           }}
           onScan={(id) => dispatch({ type: 'open', id, scan: true })}

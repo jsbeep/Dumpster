@@ -81,3 +81,35 @@ export function blocksToText(blocks: Block[]): string {
     .join('\n')
     .trim()
 }
+
+// 본문 찾기용 평문 — 맨 위 헤딩마다 한 조각 (P4.6b). 찾은 자리의 헤딩으로 스크롤하려고 나눈다
+//   첫 조각(첫 헤딩 앞)은 anchor·heading이 null이고 글자가 없으면 뺀다. 헤딩 조각은 본문이 비어도 남긴다(헤딩 글자로도 찾음)
+//   콜아웃·인용 안 헤딩은 나누지 않고 그 조각 글자에 섞인다
+export interface TextSection {
+  anchor: string | null
+  heading: string | null
+  text: string
+}
+
+export function blocksToSections(blocks: Block[]): TextSection[] {
+  const out: TextSection[] = []
+  let anchor: string | null = null
+  let heading: string | null = null
+  let body: Block[] = []
+  const flush = () => {
+    const text = blocksToText(body)
+    if (text || heading !== null) out.push({ anchor, heading, text })
+  }
+  for (const b of blocks) {
+    if (b.type !== 'heading') {
+      body.push(b)
+      continue
+    }
+    flush()
+    anchor = b.anchor
+    heading = inlinesToText(b.inlines).trim()
+    body = []
+  }
+  flush()
+  return out
+}

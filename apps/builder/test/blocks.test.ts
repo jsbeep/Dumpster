@@ -4,7 +4,7 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'nod
 import { tmpdir } from 'node:os'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { blocksToText, buildGraphIndex, treeToText, type Block, type Inline } from '@dumpster/schema'
+import { blocksToSections, buildGraphIndex, treeToText, type Block, type Inline } from '@dumpster/schema'
 import { buildGraph } from '../src/build'
 
 // 본문 → 블록 볼트 통합 테스트 (fixtures/vault/블록 견본 + 홈서버 구축기 본문 링크).
@@ -68,12 +68,28 @@ describe('본문이 들어가도 트리는 그대로', () => {
   })
 })
 
-describe('Doc.blocks / Doc.text', () => {
-  it('모든 문서에 블록이 차고 text = blocksToText', () => {
+describe('Doc.blocks / Doc.sections', () => {
+  it('모든 문서에 블록이 차고 sections = blocksToSections', () => {
     for (const d of graph.docs) {
       expect(d.blocks.length, d.title).toBeGreaterThan(0)
-      expect(d.text).toBe(blocksToText(d.blocks))
+      expect(d.sections).toEqual(blocksToSections(d.blocks))
     }
+  })
+
+  it('blocksToSections: 맨 위 헤딩마다 한 조각, 헤딩 앞 빈 조각은 뺌, 빈 헤딩 조각은 남김', () => {
+    const t = (text: string): Inline[] => [{ text }]
+    const blocks: Block[] = [
+      { type: 'heading', level: 2, anchor: '설치', inlines: t('설치 ') },
+      { type: 'paragraph', inlines: t('apt로 깐다') },
+      { type: 'callout', kind: 'note', title: t('주의'), fold: 'none', children: [{ type: 'heading', level: 3, anchor: '속', inlines: t('속 헤딩') }] },
+      { type: 'heading', level: 3, anchor: '끝', inlines: t('끝') },
+    ]
+    expect(blocksToSections(blocks)).toEqual([
+      { anchor: '설치', heading: '설치', text: 'apt로 깐다\n주의\n속 헤딩' },
+      { anchor: '끝', heading: '끝', text: '' },
+    ])
+    expect(blocksToSections([{ type: 'paragraph', inlines: t('앞') }, ...blocks.slice(0, 2)])[0]).toEqual({ anchor: null, heading: null, text: '앞' })
+    expect(blocksToSections([])).toEqual([])
   })
 
   it('용량 부족 사태: 별칭 링크는 별칭 글자로, 줄바꿈 1번은 \\n', () => {
@@ -89,7 +105,9 @@ describe('Doc.blocks / Doc.text', () => {
         ],
       },
     ])
-    expect(doc('용량 부족 사태').text).toBe('사진 동기화 켜자마자 SD카드 꽉 참 → 외장 SSD 달기\n처음에 깐 OS를 SD에 깐 게 원죄')
+    expect(doc('용량 부족 사태').sections).toEqual([
+      { anchor: null, heading: null, text: '사진 동기화 켜자마자 SD카드 꽉 참 → 외장 SSD 달기\n처음에 깐 OS를 SD에 깐 게 원죄' },
+    ])
   })
 
   it('고정 IP 설정: 비공개 문서 링크는 회색 글자(docId null), 콜아웃', () => {

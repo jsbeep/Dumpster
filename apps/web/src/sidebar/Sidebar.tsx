@@ -1,6 +1,7 @@
 import type { GraphIndex } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import type { Store } from '../core/data'
 import { stepRow } from '../core/treeRows'
 import type { View } from '../core/view'
 import { isTyping, useKeyDown } from '../hooks/useKeys'
@@ -19,6 +20,7 @@ import { useSidebarList, type RevealRequest } from './useSidebarList'
 //   떠 있는 화면(좁은 창·두 칸)에선 레일까지만 붙고, 전체는 칸 위에 떠서 열린다(바깥 누르기·Esc·글 고르기 → 레일)
 //   j/k: 트리에서 다음/이전 글 — 지금 보는 칸의 글 줄에서 한 줄 아래/위를 누른 것과 같다(흐름 칸 교체). 기록은 덮어씀(scan).
 //        사이드바가 접혔거나 최근·태그 탭이어도 트리(접은 갈래 반영) 기준
+//   / · Ctrl/⌘+K: 찾기칸으로 — 레일·접힘이면 전체로 펼치고(떠 있는 화면이면 띄우고), 폰이면 서랍을 연다 (P4.6a)
 //   폰(≤720px, 11-27): 단계 없음. 칸 머리 ☰ → App이 사이드바+칸을 통째로 밀어 꺼낸다(서랍) — 여기선 전체 내용만 그린다
 // 11-27 평평한 판: 카드·그림자 없이 사이드바 바탕색만. 칸 쪽 경계선은 첫 칸의 왼쪽 선이 맡는다
 
@@ -38,13 +40,15 @@ interface Props {
   sidebar: SidebarState
   phone: boolean // 폰 서랍 — 전체 내용만, 폭 drawerWidth
   drawerWidth: number
+  onDrawerOpen: () => void
   onDrawerClose: () => void
   ix: GraphIndex
+  store: Store
   view: View
   focusDoc: string | null
   hl: (string | null)[]
   reveal: RevealRequest | null
-  onOpen: (docId: string) => void
+  onOpen: (docId: string, anchor?: string) => void // anchor = 본문 찾기에서 걸린 헤딩
   onScan: (docId: string) => void // j/k — 흐름 칸 교체, 기록 덮어씀
   onHome: () => void
 }
@@ -73,6 +77,17 @@ export function Sidebar(p: Props) {
     e.preventDefault()
     p.onScan(next)
   }, !!p.focusDoc)
+
+  // / · Ctrl/⌘+K — 찾기칸으로. /는 글자를 치는 중이면 넘기고, Ctrl+K는 어디서든 (브라우저 검색창 대신)
+  useKeyDown((e) => {
+    const slash = e.key === '/' && !e.ctrlKey && !e.metaKey && !e.altKey && !isTyping(e.target)
+    const ctrlK = e.code === 'KeyK' && (e.ctrlKey || e.metaKey) && !e.altKey && !e.shiftKey
+    if (!slash && !ctrlK) return
+    e.preventDefault()
+    setFocusSearch((n) => n + 1)
+    if (p.phone) p.onDrawerOpen()
+    else if (mode !== 'full') setMode('full')
+  })
 
   // 붙어 있는 가장자리 끌기 / 접혔을 때 당김 핸들 끌기 — 둘 다 놓으면 너비로 단계를 정한다
   const edgeDrag = useDrag(sidebar.commitDrag)
@@ -106,8 +121,8 @@ export function Sidebar(p: Props) {
   }, [dragging, dockedMode, animating])
 
   // 떠 있는 화면에서 글을 고르면 떠 있던 목록은 레일로
-  const pick = (id: string) => {
-    p.onOpen(id)
+  const pick = (id: string, anchor?: string) => {
+    p.onOpen(id, anchor)
     if (overlayOpen) setMode('rail')
   }
   const home = () => {
@@ -117,6 +132,7 @@ export function Sidebar(p: Props) {
   const full = (
     <SidebarList
       ix={ix}
+      store={p.store}
       view={p.view}
       focusDoc={p.focusDoc}
       hl={p.hl}

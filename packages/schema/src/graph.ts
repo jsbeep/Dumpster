@@ -1,9 +1,9 @@
-import type { Block } from './blocks'
+import type { Block, TextSection } from './blocks'
 
 // graph.json — 빌더가 만들고 탐색기·플레이그라운드가 읽는 유일한 계약.
 // 레거시(tistory-doc-graph ↔ blog-explorer)는 이 타입을 두 레포에 복붙하다 어긋났다 → 여기 한 곳에만 둔다.
 
-export const SCHEMA_VERSION = 3
+export const SCHEMA_VERSION = 4 // 4: text(글 하나 통째) → sections(헤딩마다 한 조각, P4.6b)
 
 export interface Graph {
   schemaVersion: typeof SCHEMA_VERSION
@@ -38,7 +38,7 @@ export interface Doc {
   createdAt: string // ISO +09:00. frontmatter → git 첫 커밋 → 파일 mtime 순으로 채움
   updatedAt: string // ISO. git 마지막 커밋 → mtime
   blocks: Block[] // P2(마크다운 파서) 전까지 빈 배열
-  text: string // 검색용 평문. P2 전까지 ''
+  sections: TextSection[] // 검색용 평문 — 헤딩마다 한 조각 (blocksToSections). 글마다 나눌 때 search.json으로 옮길 몫
 }
 
 // prev     : source가 target의 다음 글 (트리의 뼈대, 문서당 최대 1개)

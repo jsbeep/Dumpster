@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  SCHEMA_VERSION,
   buildGraphIndex,
   compareSiblings,
   docIdOf,
@@ -30,7 +31,7 @@ function makeDoc(title: string, extra: Partial<Doc> = {}): Doc {
     createdAt,
     updatedAt: createdAt,
     blocks: [],
-    text: '',
+    sections: [],
     ...extra,
   }
 }
@@ -44,7 +45,7 @@ const prev = (source: string, target: string | null): Edge => ({
 })
 function graphOf(docs: Doc[], edges: Edge[], manifestId: string | null = null): Graph {
   return {
-    schemaVersion: 3,
+    schemaVersion: SCHEMA_VERSION,
     generatedAt: '',
     source: { vaultCommit: null },
     collections: [{ id: 'c', path: ['c'], title: 'c', manifestId, description: null, tags: [] }],

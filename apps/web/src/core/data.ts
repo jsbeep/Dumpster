@@ -1,13 +1,17 @@
 import { buildGraphIndex, SCHEMA_VERSION, stampOf, stampOfDate, type Doc, type Graph, type GraphIndex } from '@dumpster/schema'
 
+// 본문 찾기가 훑는 것 — 글마다 헤딩별 평문
+export type SearchText = Pick<Doc, 'id' | 'sections'>
+
 // graph.json 한 파일을 통째로 받는다 (11-26 결정, 실제 볼트 gzip 약 70KB).
-// 글이 100편 안팎으로 늘면 본문을 글마다 나눌 수 있게 — 화면 코드는 본문을 getDoc(async)으로만 꺼낸다.
-// 나눌 때는 빌더 출력과 이 파일만 고치면 된다.
+// 글이 100편 안팎으로 늘면 본문을 글마다 나눌 수 있게 — 화면 코드는 본문을 getDoc, 찾기용 평문을 getSearchText(둘 다 async)로만 꺼낸다.
+// 나눌 때는 빌더 출력과 이 파일만 고치면 된다: graph.json(메타·엣지) · 글마다 블록 · search.json(평문, 처음 찾을 때 받기)
 export interface Store {
   index: GraphIndex
   // 주소에 적힌 ID → 지금 ID. 없으면 null
   resolveId(id: string): string | null
   getDoc(id: string): Promise<Doc | null>
+  getSearchText(): Promise<SearchText[]>
 }
 
 export function createStore(graph: Graph): Store {
@@ -33,6 +37,9 @@ export function createStore(graph: Graph): Store {
     async getDoc(id) {
       const real = resolveId(id)
       return real ? (index.docsById.get(real) ?? null) : null
+    },
+    async getSearchText() {
+      return graph.docs
     },
   }
 }

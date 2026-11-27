@@ -8,7 +8,7 @@ const OID = '6aeb0b8091f37a98e7007350'
 function doc(id: string, title: string, createdAt: string): Doc {
   return {
     id, title, aliases: [], collectionId: 'c', kind: 'doc', order: null, tags: [], description: null,
-    createdAt, updatedAt: createdAt, blocks: [], text: '',
+    createdAt, updatedAt: createdAt, blocks: [], sections: [],
   }
 }
 function graph(docs: Doc[]): Graph {

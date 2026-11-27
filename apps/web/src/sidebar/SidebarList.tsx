@@ -3,8 +3,8 @@ import type { GraphIndex } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
 import { ChevronDown, ChevronLeft, Maximize2, Minimize2, PanelLeftClose, Search, X } from 'lucide-react'
 import { useEffect, useMemo, useRef, type ReactNode, type RefObject } from 'react'
+import type { Store } from '../core/data'
 import { linkMarks } from '../core/links'
-import { searchDocs } from '../core/search'
 import type { View } from '../core/view'
 import { DocLink } from '../ui/DocLink'
 import { IconButton } from '../ui/IconButton'
@@ -14,10 +14,13 @@ import { Recent } from './Recent'
 import { item, Logo, TABS, ThemeToggle } from './shared'
 import { Tags } from './Tags'
 import { Tree } from './Tree'
+import { useSearch } from './useSearch'
 import type { ListState } from './useSidebarList'
 
 // 사이드바 전체 단계의 내용 (붙어 있을 때·떠 있을 때·폰 서랍 모두 이것)
-//   [로고(=접기) 헌옷수거함(=첫 화면)/jsbeep ☾] · 제목 찾기 · [컬렉션|최근|태그] · ── · 목록 (검색어가 있으면 찾은 글)
+//   [로고(=접기) 헌옷수거함(=첫 화면)/jsbeep ☾] · 찾기칸 · [컬렉션|최근|태그] · ── · 목록
+//   검색어가 있으면 목록 대신 찾은 글: 제목·별칭으로 찾은 글 → "본문에서"(두 글자부터, 걸린 줄 + 헤딩 · 누르면 그 헤딩까지)
+//   / · Ctrl/⌘+K = 찾기칸으로 (Sidebar)
 
 const styles = {
   brand: 'mx-3 mt-2 flex h-12 shrink-0 items-center gap-2.5',
@@ -39,6 +42,10 @@ const styles = {
   collLabel: 'min-w-0 flex-1 truncate font-semibold',
   count: 'shrink-0 pr-1 font-mono text-[11px] tabular-nums text-slate-400',
   mark: 'rounded-sm bg-amber-100 text-inherit',
+  kbd: 'pointer-events-none absolute right-2 top-1/2 -translate-y-1/2 rounded border border-line px-1.5 font-mono text-[10px] leading-4 text-slate-400 peer-focus:hidden',
+  group: 'px-2 pb-1 text-[11px] font-medium text-slate-400',
+  snippet: 'truncate text-[12px] text-slate-500',
+  empty: 'px-2 py-1.5 text-[12px] text-slate-400',
 } as const
 
 // 찾은 제목에서 검색어 자리 칠하기 (띄어쓰기 없이 맞은 건 칠하지 않음)
@@ -57,30 +64,33 @@ function Marked({ text, query }: { text: string; query: string }) {
 
 interface Props {
   ix: GraphIndex
+  store: Store // 본문 찾기용 평문 (getSearchText)
   view: View
   focusDoc: string | null // 트리 ↙↗ 표시의 기준
   hl: (string | null)[] // 트리에서 테두리로 짚을 글
   list: ListState
   bodyRef: RefObject<HTMLDivElement>
   phone: boolean
-  focusSearch: number // 늘어나면 검색칸에 글자 커서 (레일의 검색 아이콘으로 펼쳤을 때)
+  focusSearch: number // 늘어나면 검색칸에 글자 커서 (레일의 검색 아이콘 · / · Ctrl/⌘+K)
   onSearchFocused: () => void
   onClose: () => void // 로고: 폰이면 서랍 닫기, 아니면 레일로
-  onPick: (id: string) => void
+  onPick: (id: string, anchor?: string) => void // anchor = 본문 찾기에서 걸린 헤딩
   onHome: () => void
 }
 
 export function SidebarList(p: Props) {
   const { ix, view, list } = p
   const searchRef = useRef<HTMLInputElement>(null)
-  // 레일의 검색 아이콘으로 펼쳤으면 검색칸에 바로
+  // 레일의 검색 아이콘·단축키로 왔으면 검색칸에 바로. 이미 적힌 검색어는 골라 둔다(바로 치면 새 검색어)
+  // preventScroll: 폰 서랍·떠 있는 목록은 밀려 들어오는 중이라, 그냥 focus하면 브라우저가 바깥 상자를 스크롤해 버린다
   useEffect(() => {
     if (!p.focusSearch) return
-    searchRef.current?.focus()
+    searchRef.current?.focus({ preventScroll: true })
+    searchRef.current?.select()
     p.onSearchFocused() // 한 번만 — 다음에 펼칠 땐 검색칸에 안 감
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [p.focusSearch])
-  const hits = useMemo(() => searchDocs(ix, list.query), [ix, list.query])
+  const { titleHits, bodyHits, wantBody, bodyWaiting } = useSearch(ix, p.store, list.query)
   const searching = list.query.trim() !== ''
   const marks = useMemo(() => linkMarks(ix, p.focusDoc), [ix, p.focusDoc])
   const count = (cid: string) => ix.docsByCollection.get(cid)?.length ?? 0
@@ -99,26 +109,49 @@ export function SidebarList(p: Props) {
 
   let body: ReactNode
   if (searching) {
-    body = hits.length ? (
-      hits.map(({ doc, alias }) => (
-        <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id)} className={cx(item.row, view.main === doc.id ? item.on : item.idle)} data-hit>
-          <span className={item.title}>
-            <Marked text={doc.title} query={list.query} />
-          </span>
-          <span className={item.meta}>
-            <span className="truncate">{ix.collectionsById.get(doc.collectionId)?.title}</span>
-            {alias && (
-              <span className="truncate">
-                별칭 <Marked text={alias} query={list.query} />
-              </span>
-            )}
-          </span>
-        </DocLink>
-      ))
-    ) : (
-      <p className="px-2 py-1.5 text-[12px] text-slate-400" data-no-hit>
-        맞는 제목이 없어요
-      </p>
+    const rowClass = (id: string) => cx(item.row, view.main === id ? item.on : item.idle)
+    body = (
+      <>
+        {titleHits.map(({ doc, alias }) => (
+          <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id)} className={rowClass(doc.id)} data-hit>
+            <span className={item.title}>
+              <Marked text={doc.title} query={list.query} />
+            </span>
+            <span className={item.meta}>
+              <span className="truncate">{ix.collectionsById.get(doc.collectionId)?.title}</span>
+              {alias && (
+                <span className="truncate">
+                  별칭 <Marked text={alias} query={list.query} />
+                </span>
+              )}
+            </span>
+          </DocLink>
+        ))}
+        {bodyHits.length > 0 && (
+          <p className={cx(styles.group, titleHits.length ? 'pt-3' : 'pt-1')} data-body-group>
+            본문에서
+          </p>
+        )}
+        {bodyHits.map(({ doc, anchor, heading, snippet, count }) => (
+          <DocLink key={doc.id} id={doc.id} onGo={() => p.onPick(doc.id, anchor ?? undefined)} className={rowClass(doc.id)} data-body-hit={anchor ?? ''}>
+            <span className={item.title}>{doc.title}</span>
+            <span className={styles.snippet}>
+              {snippet.before}
+              <mark className={styles.mark}>{snippet.match}</mark>
+              {snippet.after}
+            </span>
+            <span className={item.meta}>
+              <span className="truncate">{heading !== null ? `› ${heading}` : ix.collectionsById.get(doc.collectionId)?.title}</span>
+              {count > 1 && <span className="ml-auto shrink-0">{count}곳</span>}
+            </span>
+          </DocLink>
+        ))}
+        {!titleHits.length && !bodyHits.length && !bodyWaiting && (
+          <p className={styles.empty} data-no-hit>
+            {wantBody ? '맞는 글이 없어요' : '맞는 제목이 없어요 · 본문은 두 글자부터'}
+          </p>
+        )}
+      </>
     )
   } else if (list.tab === 'collections') {
     const k = list.only ? ix.collectionsById.get(list.only) : undefined
@@ -202,13 +235,17 @@ export function SidebarList(p: Props) {
         <input
           ref={searchRef}
           type="search"
-          className={cx(styles.search, '[&::-webkit-search-cancel-button]:hidden')}
-          placeholder="제목 찾기"
-          aria-label="제목 찾기"
+          className={cx(styles.search, 'peer [&::-webkit-search-cancel-button]:hidden')}
+          placeholder="제목·본문 찾기"
+          aria-label="제목·본문 찾기"
+          aria-keyshortcuts="/ Control+K Meta+K"
           value={list.query}
           onChange={(e) => list.setQuery(e.target.value)}
           onKeyDown={(e) => {
-            if (e.key === 'Enter' && hits[0]) p.onPick(hits[0].doc.id)
+            if (e.key === 'Enter') {
+              if (titleHits[0]) p.onPick(titleHits[0].doc.id)
+              else if (bodyHits[0]) p.onPick(bodyHits[0].doc.id, bodyHits[0].anchor ?? undefined)
+            }
             if (e.key === 'Escape' && list.query) {
               e.stopPropagation() // 떠 있는 사이드바의 Esc(닫기)보다 먼저 — 검색어부터 지운다
               list.setQuery('')
@@ -216,6 +253,11 @@ export function SidebarList(p: Props) {
           }}
           data-search
         />
+        {!list.query && !p.phone && (
+          <kbd className={styles.kbd} aria-hidden>
+            /
+          </kbd>
+        )}
         {list.query && (
           <IconButton
             label="검색어 지우기"

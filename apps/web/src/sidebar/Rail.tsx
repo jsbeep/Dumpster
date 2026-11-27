@@ -15,7 +15,7 @@ export function Rail({ tab, onExpand, onHide, onSearch, onTab }: { tab: SideTab;
         <Logo hoverIcon={PanelLeftOpen} label="사이드바 펼치기" onClick={onExpand} />
       </div>
       <nav className={cx(railList, 'pt-3')} aria-label="목록 보기">
-        <IconButton label="제목 찾기" size="xl" tone="side" onClick={onSearch}>
+        <IconButton label="찾기" tip="찾기 ( / )" size="xl" tone="side" onClick={onSearch}>
           <Search size={16} />
         </IconButton>
         {TABS.map(({ tab: t, icon: Icon, label }) => (

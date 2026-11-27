@@ -1,6 +1,6 @@
 import {
   SCHEMA_VERSION,
-  blocksToText,
+  blocksToSections,
   docIdOf,
   edgeIdOf,
   inlinesToText,
@@ -117,7 +117,7 @@ export function buildGraph(opts: BuildOptions): BuildResult {
         createdAt,
         updatedAt: dirty.has(note.relPath) || !fileDates ? note.mtime : fileDates.updated,
         blocks: [],
-        text: '',
+        sections: [],
       },
     })
   }
@@ -206,7 +206,7 @@ export function buildGraph(opts: BuildOptions): BuildResult {
     })
     for (const w of parsed.warnings) report.warnings.push(`${e.note.relPath}: ${w}`)
     e.doc.blocks = parsed.blocks
-    e.doc.text = blocksToText(parsed.blocks)
+    e.doc.sections = blocksToSections(parsed.blocks)
     e.refs = parsed.refs
   }
 

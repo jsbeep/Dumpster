@@ -5,6 +5,7 @@ import { useEffect, useLayoutEffect, useRef } from 'react'
 //          입력칸의 Esc(검색어 지우기·찾기 닫기)는 그 칸이 먼저 받아 stopPropagation — 창까지 안 온다
 //   Ctrl/⌘+F : 지금 보는 칸에서 찾기 (pane/Find useFind)
 //   j / k : 트리에서 다음/이전 글 (Sidebar) — 글자 자리(e.code)로 봐서 한글 자판이어도 된다
+//   / · Ctrl/⌘+K : 사이드바 찾기칸으로 (Sidebar)
 
 // 글자를 치는 중(입력칸·편집 가능한 곳)이면 한 글자 단축키는 넘긴다
 export function isTyping(t: EventTarget | null): boolean {
