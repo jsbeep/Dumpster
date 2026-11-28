@@ -19,6 +19,8 @@ if (!vault) {
 }
 const vaultDir = fromRoot(vault)
 const publicFolders = (process.env.DUMPSTER_PUBLIC ?? '').split(',').map((s) => s.trim()).filter(Boolean)
+// 무시할 폴더 이름 (쉼표 구분). 비우면 _image
+const ignoreFolders = (process.env.DUMPSTER_IGNORE || '_image').split(',').map((s) => s.trim()).filter(Boolean)
 const outFile = fromRoot(process.env.DUMPSTER_OUT ?? 'out/graph.json')
 if (!publicFolders.length) console.warn('⚠ DUMPSTER_PUBLIC이 비어 있어요 — 아무것도 공개되지 않아요.')
 // 조용한 모드: 공개 레포의 Actions 로그는 누구나 본다 → 경로·제목은 빼고 개수만.
@@ -40,7 +42,7 @@ if (existsSync(outFile)) {
 }
 
 const started = performance.now()
-const { graph, report, assets } = buildGraph({ vaultDir, publicFolders })
+const { graph, report, assets } = buildGraph({ vaultDir, publicFolders, ignoreFolders })
 // 한 파일 그대로, 공백만 뺀다 (11-26: 실제 볼트 gzip 약 70KB). 들여쓰기가 크기의 절반이었다
 const json = JSON.stringify(graph)
 mkdirSync(dirname(outFile), { recursive: true })

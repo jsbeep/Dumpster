@@ -21,6 +21,7 @@ export interface LeakCheck {
 export interface LeakOptions {
   vaultDir: string
   publicFolders: string[]
+  ignoreFolders?: string[] // 이 이름의 폴더는 하위까지 비공개 (기본 _image)
   distDir: string // graph.json · assets/ · index.html이 있는 폴더
   minFragment?: number // 비공개 본문 한 줄을 글자·숫자만 남겼을 때 이 길이 이상만 본다 (짧은 줄은 우연히 겹침)
 }
@@ -93,14 +94,18 @@ function percentHits(value: unknown, path: string, out: string[]) {
 
 export function checkLeaks(opts: LeakOptions): LeakCheck[] {
   const minFragment = opts.minFragment ?? 10
-  const publicSet = new Set(opts.publicFolders.map(norm).filter(Boolean))
+  const roots = opts.publicFolders.map(norm).filter(Boolean)
+  const ignore = new Set((opts.ignoreFolders ?? ['_image']).map(norm).filter(Boolean))
+  // 공개 = 공개 목록 폴더나 그 하위, 단 중간에 무시 폴더가 없을 때
+  const publicDir = (dir: string) =>
+    roots.some((r) => (dir === r || dir.startsWith(`${r}/`)) && !dir.slice(r.length).split('/').some((seg) => ignore.has(seg)))
   const graphFile = join(opts.distDir, 'graph.json')
   if (!existsSync(graphFile)) return [{ name: 'graph.json', problems: [{ summary: 'graph.json이 없음', detail: graphFile }] }]
   const graphText = readFileSync(graphFile, 'utf8')
   const graph = JSON.parse(graphText) as Graph
 
   const notes = readNotes(opts.vaultDir)
-  const isPublic = (n: SourceNote) => !n.draft && publicSet.has(norm(posix.dirname(n.relPath) === '.' ? '' : posix.dirname(n.relPath)))
+  const isPublic = (n: SourceNote) => !n.draft && publicDir(norm(posix.dirname(n.relPath) === '.' ? '' : posix.dirname(n.relPath)))
   const hidden = notes.filter((n) => !isPublic(n))
   const publicSource = squash(notes.filter(isPublic).map((n) => n.raw).join('\n'))
 
@@ -116,7 +121,7 @@ export function checkLeaks(opts: LeakOptions): LeakCheck[] {
   checks.push({
     name: '컬렉션',
     problems: graph.collections
-      .filter((c) => !publicSet.has(norm(c.path.join('/'))))
+      .filter((c) => !publicDir(norm(c.path.join('/'))))
       .map((c) => ({ summary: '공개 목록 밖 컬렉션', detail: c.path.join('/') })),
   })
 

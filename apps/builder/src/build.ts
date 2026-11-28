@@ -21,6 +21,7 @@ import { scanVault, type VaultNote } from './vault'
 export interface BuildOptions {
   vaultDir: string
   publicFolders: string[]
+  ignoreFolders?: string[] // 이 이름의 폴더는 하위까지 비공개 (기본 _image)
   // 테스트에서 git 대신 고정 날짜를 넣을 때 (이때는 '커밋 안 된 수정'도 없는 것으로 본다)
   dates?: (relPath: string) => FileDates | undefined
   vaultCommit?: string | null
@@ -53,7 +54,7 @@ interface Entry {
 }
 
 export function buildGraph(opts: BuildOptions): BuildResult {
-  const scan = scanVault(opts.vaultDir, opts.publicFolders)
+  const scan = scanVault(opts.vaultDir, opts.publicFolders, opts.ignoreFolders)
   const report: BuildReport = {
     warnings: [],
     skipped: scan.skipped,
@@ -211,9 +212,9 @@ export function buildGraph(opts: BuildOptions): BuildResult {
     e.refs = parsed.refs
   }
 
-  // --- 5. 컬렉션 (공개 목록의 폴더마다 하나, 루트 = 매니페스트) ---
+  // --- 5. 컬렉션 (공개 폴더와 그 하위 폴더마다 하나, 루트 = 매니페스트) ---
   const collections: Collection[] = []
-  for (const folder of new Set(opts.publicFolders.map((f) => f.normalize('NFC').replace(/^\/+|\/+$/g, '')))) {
+  for (const folder of scan.folders) {
     if (!folder || scan.missingFolders.includes(folder)) continue
     const members = entries.filter((e) => e.note.folder === folder)
     const manifests = members.filter((e) => e.meta.kind === 'manifest').sort((a, b) => a.doc.createdAt.localeCompare(b.doc.createdAt))

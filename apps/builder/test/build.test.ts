@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import { fileURLToPath } from 'node:url'
+import { cpSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { dirname, join } from 'node:path'
 import { buildGraphIndex, treeToText, stampOf } from '@dumpster/schema'
 import { buildGraph } from '../src/build'
 
@@ -176,10 +179,40 @@ describe('공개 범위', () => {
     expect(index.nextOf.get(doc('도커 설치').id)).toHaveLength(3) // draft는 네 번째 갈래가 안 됨
   })
 
-  it('하위 폴더는 자동으로 공개되지 않는다', () => {
+  it('하위 폴더는 자동으로 공개 (하위 컬렉션) — 위 폴더만 적어도 같은 결과', () => {
     const only = build(['홈서버 구축기']).graph
-    expect(only.collections.map((c) => c.id)).toEqual(['홈서버-구축기'])
-    expect(only.docs.some((d) => d.title === 'k3s 도전기')).toBe(false)
+    expect(only.collections.map((c) => c.id)).toEqual(graph.collections.map((c) => c.id))
+    expect(only.docs.map((d) => d.id)).toEqual(graph.docs.map((d) => d.id))
+  })
+
+  it('무시 폴더(기본 _image)는 그 아래까지 비공개, 글 없는 사이 폴더는 컬렉션으로 이어 준다', () => {
+    const vault = mkdtempSync(join(tmpdir(), 'dumpster-ignore-'))
+    try {
+      cpSync(vaultDir, vault, { recursive: true })
+      const put = (rel: string) => {
+        mkdirSync(join(vault, dirname(rel)), { recursive: true })
+        writeFileSync(join(vault, rel), '숨은 글\n')
+      }
+      put('홈서버 구축기/_image/첨부 메모.md')
+      put('홈서버 구축기/_image/더 아래/메모2.md')
+      put('홈서버 구축기/부록/더 깊은/깊은 글.md')
+      put('홈서버 구축기/~초안/초안 글.md')
+      const run = (ignoreFolders?: string[]) =>
+        buildGraph({ vaultDir: vault, publicFolders: ['홈서버 구축기'], ignoreFolders, dates: () => FIXED, vaultCommit: null, now: () => new Date(0) }).graph
+      const g = run()
+      const paths = g.collections.map((c) => c.path.join('/'))
+      expect(paths).toContain('홈서버 구축기/부록') // 글은 없지만 '더 깊은'으로 가는 사이 폴더
+      expect(paths).toContain('홈서버 구축기/부록/더 깊은')
+      expect(paths.some((p) => p.includes('_image'))).toBe(false)
+      expect(g.docs.some((d) => d.title === '첨부 메모' || d.title === '메모2')).toBe(false)
+      expect(g.docs.some((d) => d.title === '깊은 글')).toBe(true)
+      // 직접 지정하면 기본값 대신 그것만
+      const g2 = run(['~초안'])
+      expect(g2.docs.some((d) => d.title === '초안 글')).toBe(false)
+      expect(g2.docs.some((d) => d.title === '첨부 메모')).toBe(true)
+    } finally {
+      rmSync(vault, { recursive: true, force: true })
+    }
   })
 
   it('0바이트 폴더 노트는 건너뛴다', () => {

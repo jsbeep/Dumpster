@@ -15,7 +15,7 @@ pnpm test && pnpm typecheck && pnpm lint
 
 - **기본은 비공개**
 - `.env`의 `DUMPSTER_PUBLIC`에 적은 폴더만 컬렉션으로 공개
-- (하위 폴더는 따로 기재)
+- 하위 폴더는 자동으로 하위 컬렉션이 됨. `DUMPSTER_IGNORE`(기본 `_image`) 이름의 폴더는 그 아래까지 제외
 - 태그에 `_draft` 포함: 비공개 처리 (옛 `draft`도 숨기지만 빌드 경고)
 - `%%주석%%`은 빠짐
 - 비공개 글로 가는 링크: 없는 글 처리

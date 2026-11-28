@@ -18,6 +18,7 @@ const quiet = process.env.DUMPSTER_QUIET === '1' || (!!process.env.CI && process
 const checks = checkLeaks({
   vaultDir: fromRoot(vault),
   publicFolders: (process.env.DUMPSTER_PUBLIC ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+  ignoreFolders: (process.env.DUMPSTER_IGNORE || '_image').split(',').map((s) => s.trim()).filter(Boolean),
   distDir: fromRoot(process.argv[2] ?? 'apps/web/dist'),
 })
 

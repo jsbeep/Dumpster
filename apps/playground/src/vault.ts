@@ -7,7 +7,12 @@ import { parse as parseYaml } from 'yaml'
 //   이미지: 노트 기준 상대 경로 > 볼트 경로 > 파일 이름 (같은 폴더 > 그 아래 > 짧은 경로). 공개 폴더 아래 것만
 
 declare const __FIXTURE_PUBLIC__: string[]
+declare const __FIXTURE_IGNORE__: string[]
 const PUBLIC = new Set(__FIXTURE_PUBLIC__)
+const IGNORE = new Set(__FIXTURE_IGNORE__)
+// 빌더와 같게: 공개 폴더와 그 하위 폴더, 단 중간에 무시 폴더(기본 _image)가 없을 때
+const isPublicFolder = (folder: string) =>
+  [...PUBLIC].some((f) => (folder === f || folder.startsWith(`${f}/`)) && !folder.slice(f.length).split('/').some((seg) => IGNORE.has(seg)))
 
 const PREFIX = '../../../fixtures/vault/'
 const noteFiles = import.meta.glob<string>('../../../fixtures/vault/**/*.md', { query: '?raw', import: 'default', eager: true })
@@ -54,7 +59,7 @@ export const NOTES: Note[] = Object.entries(noteFiles)
   .map(([file, raw]) => {
     const path = file.slice(PREFIX.length).normalize('NFC')
     const folder = folderOf(path)
-    return { path, folder, title: basename(path).slice(0, -3), raw, aliases: aliasesOf(splitFrontmatter(raw).data), public: PUBLIC.has(folder) }
+    return { path, folder, title: basename(path).slice(0, -3), raw, aliases: aliasesOf(splitFrontmatter(raw).data), public: isPublicFolder(folder) }
   })
   .sort((a, b) => a.path.localeCompare(b.path, 'ko'))
 

@@ -10,11 +10,15 @@ const fixturePublic = (/^DUMPSTER_PUBLIC=(.*)$/m.exec(envExample)?.[1] ?? '')
   .split(',')
   .map((s) => s.trim())
   .filter(Boolean)
+const fixtureIgnore = (/^DUMPSTER_IGNORE=(.*)$/m.exec(envExample)?.[1] || '_image')
+  .split(',')
+  .map((s) => s.trim())
+  .filter(Boolean)
 
 // 개발 전용 — 포트는 package.json 스크립트(--port 5310 --strictPort)에서
 export default defineConfig({
   plugins: [react(), dumpsterDevApi()],
-  define: { __FIXTURE_PUBLIC__: JSON.stringify(fixturePublic) },
+  define: { __FIXTURE_PUBLIC__: JSON.stringify(fixturePublic), __FIXTURE_IGNORE__: JSON.stringify(fixtureIgnore) },
   server: { host: '127.0.0.1' },
   preview: { host: '127.0.0.1' },
 })

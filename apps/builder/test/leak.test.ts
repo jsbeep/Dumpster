@@ -108,4 +108,17 @@ describe('유출 검사', () => {
     save(g)
     expect(failed()).toEqual({})
   })
+
+  it('무시 폴더(_image) 안 글은 공개 폴더 아래여도 비공개로 검사, 하위 폴더 글은 공개로', () => {
+    const vault = join(root, 'vault-ignore')
+    cpSync(vaultDir, vault, { recursive: true })
+    writeFileSync(join(vault, '블록 견본/_image/첨부 메모.md'), '카나리아-무시-폴더-글이-graph.json에-보이면-유출\n')
+    const g = graphOf()
+    g.docs[0].blocks.push(para('카나리아-무시-폴더-글이-graph.json에-보이면-유출'))
+    save(g)
+    const problems = checkLeaks({ vaultDir: vault, publicFolders: ['홈서버 구축기', '블록 견본'], distDir: dist })
+    expect(problems.filter((c) => c.problems.length).map((c) => c.name)).toEqual(['비공개 본문'])
+    // 하위 폴더(시즌2)는 목록에 안 적어도 공개 — 컬렉션 검사에 안 걸린다
+    expect(problems.find((c) => c.name === '컬렉션')!.problems).toEqual([])
+  })
 })

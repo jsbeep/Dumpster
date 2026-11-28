@@ -9,7 +9,8 @@
 #   secrets.VAULT_DEPLOY_KEY  볼트 레포 deploy key의 비밀 키 (볼트 쪽엔 읽기 전용으로 등록)
 #   vars.VAULT_REPO           볼트 레포 이름 'owner/name'
 #   vars.DUMPSTER_PUBLIC      공개 컬렉션 폴더, 쉼표 구분 (사이트에 어차피 보이는 이름이라 secret 대신 variable
-#                             — secret이면 로그에서 컬렉션 이름이 전부 *** 로 가려짐)
+#                             — secret이면 로그에서 컬렉션 이름이 전부 *** 로 가려짐). 하위 폴더는 자동 포함
+#   vars.DUMPSTER_IGNORE      (선택) 무시할 폴더 이름, 쉼표 구분. 없으면 _image
 #
 # 이 레포는 공개라 Actions 로그도 공개 → 빌더·유출 검사 모두 조용한 모드(개수만). 자세히는 로컬에서.
 
@@ -35,6 +36,7 @@ jobs:
     env:
       DUMPSTER_VAULT: vault
       DUMPSTER_PUBLIC: ${{ vars.DUMPSTER_PUBLIC }}
+      DUMPSTER_IGNORE: ${{ vars.DUMPSTER_IGNORE }}
       DUMPSTER_QUIET: '1'
     steps:
       - uses: actions/checkout@v5

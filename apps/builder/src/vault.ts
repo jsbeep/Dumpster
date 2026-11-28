@@ -21,6 +21,8 @@ export interface VaultScan {
   assets: VaultAsset[]
   privateAssetNames: Set<string> // 그 밖 이미지의 소문자 파일 이름. 리포트용 — 내용은 안 읽는다
   missingFolders: string[]
+  // 컬렉션이 될 폴더 — 공개 목록의 폴더 + 그 아래 글이 있는 하위 폴더(와 그 사이 폴더). 무시 폴더 아래는 빠진다
+  folders: string[]
 }
 
 export interface VaultAsset {
@@ -30,10 +32,23 @@ export interface VaultAsset {
 
 const norm = (p: string) => p.normalize('NFC').replace(/\\/g, '/').replace(/^\/+|\/+$/g, '')
 
-export function scanVault(vaultDir: string, publicFolders: string[]): VaultScan {
+export const DEFAULT_IGNORE = ['_image']
+
+// 공개 목록의 폴더는 하위 폴더까지 공개. 단 이름이 ignore에 있는 폴더(기본 _image)는 그 아래까지 통째로 빠진다
+export function isPublicFolder(folder: string, publicFolders: string[], ignore: string[] = DEFAULT_IGNORE): boolean {
+  const ignoreSet = new Set(ignore.map(norm).filter(Boolean))
+  return publicFolders.map(norm).filter(Boolean).some((f) => {
+    if (folder !== f && !folder.startsWith(`${f}/`)) return false
+    return !folder.slice(f.length).split('/').some((seg) => ignoreSet.has(seg))
+  })
+}
+
+export function scanVault(vaultDir: string, publicFolders: string[], ignore: string[] = DEFAULT_IGNORE): VaultScan {
   const publicSet = new Set(publicFolders.map(norm).filter(Boolean))
-  const scan: VaultScan = { notes: [], skipped: [], privateNames: new Set(), assets: [], privateAssetNames: new Set(), missingFolders: [] }
+  const scan: VaultScan = { notes: [], skipped: [], privateNames: new Set(), assets: [], privateAssetNames: new Set(), missingFolders: [], folders: [] }
+  // 이미지는 무시 폴더와 상관없이 공개 폴더 아래면 쓴다 (_image가 바로 그 첨부 폴더)
   const underPublic = (folder: string) => [...publicSet].some((f) => folder === f || folder.startsWith(`${f}/`))
+  const isPublic = (folder: string) => isPublicFolder(folder, [...publicSet], ignore)
 
   for (const folder of publicSet) {
     if (!existsSync(join(vaultDir, folder))) scan.missingFolders.push(folder)
@@ -56,7 +71,7 @@ export function scanVault(vaultDir: string, publicFolders: string[]): VaultScan 
       }
       if (!entry.name.toLowerCase().endsWith('.md')) continue
       const title = entry.name.slice(0, -3).normalize('NFC')
-      if (!publicSet.has(folder)) {
+      if (!isPublic(folder)) {
         scan.privateNames.add(title.toLowerCase())
         scan.privateNames.add(relPath.slice(0, -3).toLowerCase())
         continue
@@ -71,6 +86,12 @@ export function scanVault(vaultDir: string, publicFolders: string[]): VaultScan 
     }
   }
   walk('')
+  // 컬렉션 폴더: 공개 목록 그대로 + 글이 있는 하위 폴더와 그 위로 공개 목록 폴더까지의 사이 폴더
+  const folders = new Set(publicSet)
+  for (const n of scan.notes) {
+    for (let f = n.folder; f && !folders.has(f); f = f.includes('/') ? f.slice(0, f.lastIndexOf('/')) : '') folders.add(f)
+  }
+  scan.folders = [...folders]
   scan.notes.sort((a, b) => a.relPath.localeCompare(b.relPath, 'ko'))
   return scan
 }
