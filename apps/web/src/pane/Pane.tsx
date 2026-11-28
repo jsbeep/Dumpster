@@ -12,6 +12,7 @@ import { FindBar, useFind } from './Find'
 import { PaneHeader } from './PaneHeader'
 import { frame } from './styles'
 import { headText, Toc, TocSheet } from './Toc'
+import { ToTop } from './ToTop'
 import { useDoc } from './useDoc'
 import { scrollerOf, scrollToAnchor, useLanding, useScrollMemory, useScrollSpy } from './useScroll'
 import { useWidthFollow } from './useWidthFollow'
@@ -74,7 +75,7 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
   const phoneToc =
     p.phone && heads.length >= 2 ? { label: curHead ? headText(curHead) : spy.title ? title : null, open: tocOpen, onToggle: () => setTocOpen((o) => !o) } : undefined
   const jump = useCallback((anchor: string) => scrollToAnchor(scrollRef.current, anchor), []) // Article(memo)에 넘긴다
-  // 글 맨 위로 (폰 목차 펼침의 글 제목)
+  // 글 맨 위로 (폰 목차 펼침의 글 제목 · 맨 위로 버튼)
   const toTop = useCallback(() => {
     if (scrollRef.current) scrollerOf(scrollRef.current).scrollTo({ top: 0, behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' })
   }, [])
@@ -143,6 +144,8 @@ export const Pane = forwardRef<HTMLElement, Props>(function Pane(p, ref) {
             </div>
             {tocRail && <Toc heads={heads} current={spy.heading} onGo={jump} />}
           </div>
+          {/* 폰은 fixed라 밀리는 본문 묶음(transform) 밖에 둔다 — 안에 두면 그 묶음에 붙어 화면에서 떨어진다 */}
+          <ToTop show={spy.far} phone={p.phone} onClick={toTop} />
         </m.div>
         {p.flash?.slot === slot && (
           <m.div

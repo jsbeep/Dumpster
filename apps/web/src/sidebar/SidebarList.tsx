@@ -25,7 +25,7 @@ import type { ListState } from './useSidebarList'
 //   / · Ctrl/⌘+K = 찾기칸으로 (Sidebar)
 
 const styles = {
-  brand: 'mx-3 mt-2 flex h-12 shrink-0 items-center gap-2.5',
+  brand: 'mx-3 mt-2 max-[720px]:mt-0 flex h-12 shrink-0 items-center gap-2.5', // 폰 서랍은 상자가 이미 화면 끝에서 12px 내려와 있다 (pane/styles frame.drawer)
   // 제목 = 첫 화면 버튼
   brandName: 'group/title min-w-0 flex-1 rounded-md text-left outline-none',
   brandTitle: 'truncate text-sm font-semibold tracking-tight text-slate-900 transition-colors group-hover/title:text-slate-500',

@@ -1,6 +1,6 @@
 import { cx } from '@dumpster/blocks'
 import { AnimatePresence, LayoutGroup } from 'framer-motion'
-import { useCallback, useEffect, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent } from 'react'
 import type { Store } from './core/data'
 import { parseHash } from './core/route'
 import { slideOf } from './core/slide'
@@ -8,6 +8,7 @@ import { activeOf, type Action } from './core/view'
 import { Home } from './Home'
 import { useDrawerWidth, useMedia } from './hooks/useMedia'
 import { useKeyDown } from './hooks/useKeys'
+import { useOutsideTap } from './hooks/useOutsideTap'
 import { useView, type Land } from './hooks/useView'
 import { Lightbox, type Zoom } from './Lightbox'
 import { Pane } from './pane/Pane'
@@ -59,6 +60,9 @@ export function Explorer({ store }: { store: Store }) {
   const leftTabs = hasRel && !phone ? view.active + (coll === 'rel' ? 1 : 0) : 0
   const rightTabs = hasRel && !phone ? view.tabs.length - view.active - 1 : 0
   const drawerOpen = phone && drawer
+  const drawerRef = useRef<HTMLDivElement>(null)
+  const closeDrawer = useCallback(() => setDrawer(false), [])
+  useOutsideTap(drawerRef, drawerOpen, closeDrawer)
 
   // 폰이 아니게 되면 서랍은 닫힌 것으로
   useEffect(() => {
@@ -159,7 +163,8 @@ export function Explorer({ store }: { store: Store }) {
   //   맨 위·아래에서 문서가 튕겨도(iOS 바운스·당겨서 새로고침) 머리는 제자리.
   //   서랍 = 화면에 고정된 사이드바가 왼쪽에서 들어오고, 같은 움직임(frame.slide)으로 칸 머리·본문이 서랍 폭만큼 오른쪽으로 밀린다
   //   (사용자: 이 움직임은 좋았다 — 남김). 칸 묶음 통째로 밀면 그 transform이 고정된 머리를 붙잡아 화면에서 떨어진다 →
-  //   바깥은 --push 값만 바꾸고 머리·본문이 각자 민다(frame.push). 밀린 칸 위엔 투명한 막, 누르면 닫힘. 밀려서 화면 밖으로 나간 부분은
+  //   바깥은 --push 값만 바꾸고 머리·본문이 각자 민다(frame.push). 밀린 칸을 누르면 닫힘 — 막 없이(useOutsideTap), 그래서
+  //   서랍이 열려 있어도 밀린 칸을 끌면 문서가 그대로 굴러간다(11-28 사용자). 어둡게 하지 않는다(11-27). 밀려서 화면 밖으로 나간 부분은
   //   overflow-x-clip으로 잘라 가로 스크롤이 안 생기게. 서랍은 닫혀 있어도 그려 둔다 — 찾기어·트리 스크롤이 남게.
   //   탭이 있으면 펼친 탭, 없으면 흐름 글 (design.md §3 폰)
   if (phone) {
@@ -177,10 +182,9 @@ export function Explorer({ store }: { store: Store }) {
               home
             )}
           </main>
-          {/* 밀린 칸 위 투명한 막 — 누르면 닫힘, 끌어도 뒤 문서가 안 굴러감. 어둡게 하지 않는다(11-27 사용자) */}
-          {drawerOpen && <div className="fixed inset-0 z-[90] touch-none" onClick={() => setDrawer(false)} aria-hidden data-scrim />}
         </div>
-        <div className={cx('fixed inset-y-0 left-0 z-[100]', frame.slide)} style={{ width: drawerW, transform: `translateX(${drawer ? 0 : -drawerW}px)` }}>
+        {/* 서랍 상자는 화면 위·아래 끝에서 조금 떨어져 있다 — iOS 26 사파리 상태바·주소창 색 (frame.drawer) */}
+        <div ref={drawerRef} className={cx(frame.drawer, frame.slide)} style={{ width: drawerW, transform: `translateX(${drawer ? 0 : -drawerW}px)` }}>
           {sidebarEl}
         </div>
         <Lightbox zoom={zoom} onClose={() => setZoom(null)} />

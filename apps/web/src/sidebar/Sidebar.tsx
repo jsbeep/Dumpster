@@ -1,11 +1,12 @@
 import type { GraphIndex } from '@dumpster/schema'
 import { AnimatePresence, m } from 'framer-motion'
-import { useEffect, useRef, useState, type KeyboardEvent } from 'react'
+import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from 'react'
 import type { Store } from '../core/data'
 import { stepRow } from '../core/treeRows'
 import type { View } from '../core/view'
 import type { Land } from '../hooks/useView'
 import { isTyping, useKeyDown } from '../hooks/useKeys'
+import { useOutsideTap } from '../hooks/useOutsideTap'
 import { QUICK } from '../ui/motion'
 import { PullHandle } from './PullHandle'
 import { Rail } from './Rail'
@@ -65,11 +66,14 @@ export function Sidebar(p: Props) {
   })
   const [focusSearch, setFocusSearch] = useState(0)
 
-  // 떠 있는 전체: Esc → 레일
+  // 떠 있는 전체: Esc · 바깥 누르기 → 레일
   const overlayOpen = isOverlay && mode === 'full'
   useKeyDown((e) => {
     if (e.key === 'Escape') setMode('rail')
   }, overlayOpen)
+  const panelRef = useRef<HTMLElement>(null)
+  const toRail = useCallback(() => setMode('rail'), [setMode])
+  useOutsideTap(panelRef, overlayOpen, toRail)
 
   // j/k — 트리에서 지금 글 줄의 다음/이전 줄
   useKeyDown((e) => {
@@ -224,20 +228,21 @@ export function Sidebar(p: Props) {
 
       {mode === 'collapsed' && !edgeDrag.dragging && <PullHandle drag={pullDrag} onRestore={sidebar.restore} />}
 
-      {/* 떠 있는 화면: 전체는 칸 위에 뜬다 */}
+      {/* 떠 있는 화면: 전체는 칸 위에 뜬다. 뒤는 살짝 어둡게만 — 누르기·휠은 칸으로 그대로 가고(휠 = 칸 스크롤),
+          바깥을 누르면 레일로 (useOutsideTap, 11-28) */}
       <AnimatePresence>
         {overlayOpen && (
           <>
             <m.div
               key="backdrop"
-              className="absolute inset-0 z-[100] bg-black/10"
+              className="pointer-events-none absolute inset-0 z-[100] bg-black/10"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={QUICK}
-              onClick={() => setMode('rail')}
             />
             <m.aside
+              ref={panelRef}
               key="panel"
               className="absolute inset-y-0 left-0 z-[100] max-w-[calc(100%-2rem)]"
               style={{ width }}

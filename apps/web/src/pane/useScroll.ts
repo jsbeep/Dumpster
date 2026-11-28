@@ -65,18 +65,21 @@ function landOnLink(root: HTMLElement, sc: HTMLElement, id: string) {
 export interface Spy {
   heading: string | null // 목차 줄에서 진하게 할 헤딩
   title: boolean // 제목이 위로 지나감 → 칸 머리에 제목 + 밑줄
+  far: boolean // 한 화면 넘게 내려옴 → 맨 위로 버튼 (pane/ToTop)
 }
 
 // 읽는 위치 → 목차 줄·칸 위 제목. 스크롤마다 rAF 하나로 모아 잰다
 export function useScrollSpy(scrollRef: RefObject<HTMLElement>, heads: BlockOf<'heading'>[]) {
-  const [spy, setSpy] = useState<Spy>({ heading: null, title: false })
+  const [spy, setSpy] = useState<Spy>({ heading: null, title: false, far: false })
   const raf = useRef(0)
   const onScroll = () => {
     cancelAnimationFrame(raf.current)
     raf.current = requestAnimationFrame(() => {
       const sc = scrollRef.current
       if (!sc) return
-      const top = viewOf(sc).top
+      const v = viewOf(sc)
+      const top = v.top
+      const far = scrollerOf(sc).scrollTop > v.bottom - v.top
       let heading: string | null = null
       for (const h of heads) {
         const el = sc.querySelector(`#${CSS.escape(h.anchor)}`)
@@ -84,7 +87,7 @@ export function useScrollSpy(scrollRef: RefObject<HTMLElement>, heads: BlockOf<'
       }
       const t = sc.querySelector<HTMLElement>('[data-title]')
       const title = !!t && t.getBoundingClientRect().bottom - 8 < top
-      setSpy((s) => (s.heading === heading && s.title === title ? s : { heading, title }))
+      setSpy((s) => (s.heading === heading && s.title === title && s.far === far ? s : { heading, title, far }))
     })
   }
   useEffect(() => () => cancelAnimationFrame(raf.current), [])
